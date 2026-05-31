@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "apiBase": "http://35.183.10.125:3001",
+  "secret": "ilovedylandinesh",
+  "pollIntervalMs": 2000
+}

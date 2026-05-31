@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "apiBase": "http://35.183.10.125:3001",
+  "apiBase": "https://mansiftracker.vercel.app",
   "secret": "ilovedylandinesh",
   "pollIntervalMs": 2000
 }

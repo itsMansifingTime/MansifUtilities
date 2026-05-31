@@ -6,7 +6,7 @@ When the BIN deal scanner sends a flip to Discord, the same flip is queued on th
 
 1. Edit `data/bin-deal-ingame-bridge.json` in Cursor (`apiBase`, `feedSecret`, `pollIntervalMs`), then `git pull` on EC2 and `pm2 reload mansif-next-api`.
 2. Do **not** set `enabled: false` unless you want to disable the in-game feed (Discord unchanged).
-3. Open TCP **3001** on EC2 so your PC can reach `GET /api/bin-deal-ingame-feed`.
+3. Set `publicApiBase` to your **HTTPS** site (e.g. `https://mansiftracker.vercel.app`). Do not point the mod at `http://EC2_IP:3001` unless port 3001 is open to your home IP. On **Vercel**, set env `SITE_API_ORIGIN=http://YOUR_EC2_IP:3001` so feed API routes proxy to EC2.
 
 ## Client (Minecraft)
 

@@ -29,5 +29,5 @@ When the BIN deal scanner sends a flip to Discord, the same flip is queued on th
 
 ## Notes
 
-- Feed is in-memory on the Next.js process; restarts clear history (the mod only needs new flips after connect).
+- MansifTracker persists recent flips in `data/bin-deal-ingame-feed.json` on EC2 (survives pm2 restart).
 - Vercel-only deploys need `SITE_API_ORIGIN` / `NEXT_PUBLIC_SITE_API_ORIGIN` pointing at EC2 if the scanner runs there.

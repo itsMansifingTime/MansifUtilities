@@ -33,7 +33,7 @@ public final class ItemHoverDisplay {
         KeyMapping.Category CATEGORY = new KeyMapping.Category(Identifier.fromNamespaceAndPath("minecraft", "misc"));
         KeyMapping sendToChatKey = KeyBindingHelper.registerKeyBinding(
                 new KeyMapping(
-                        "key.MansifUtilities.inspect_item", // The translation key for the key mapping.
+                        "key.mansifutilities.inspect_item", // The translation key for the key mapping.
                         InputConstants.Type.KEYSYM, // // The type of the keybinding; KEYSYM for keyboard, MOUSE for mouse.
                         GLFW.GLFW_KEY_J, // The GLFW keycode of the key.
                         CATEGORY // The category of the mapping.

@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"id": "MansifUtilities",
+	"id": "mansifutilities",
 	"version": "${1.0}",
 	"name": "MansifUtilities",
 	"description": "SkyBlock utilities: flip alerts, bazaar log, inventory tools (MansifTracker companion mod).",
@@ -12,7 +12,7 @@
 		"sources": "https://github.com/itsMansifingTime/MansifUtilities"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/MansifUtilities/icon.png",
+	"icon": "assets/mansifutilities/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"client": [
@@ -23,7 +23,7 @@
 		]
 	},
 	"mixins": [
-		"MansifUtilities.mixins.json"
+		"mansifutilities.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.18.4",

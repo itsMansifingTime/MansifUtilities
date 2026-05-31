@@ -1,4 +1,5 @@
 {
-  "category.MansifUtilities.flip_alerts": "MansifUtilities Flip Alerts",
-  "key.MansifUtilities.view_flip_auction": "View latest flip auction"
+  "category.mansifutilities.flip_alerts": "MansifUtilities Flip Alerts",
+  "key.mansifutilities.view_flip_auction": "View latest flip auction",
+  "key.mansifutilities.inspect_item": "Inspect hovered item"
 }

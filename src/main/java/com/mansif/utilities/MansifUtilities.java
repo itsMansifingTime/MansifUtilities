@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 
 
 public class MansifUtilities implements ClientModInitializer {
-	public static final String MOD_ID = "MansifUtilities";
+	public static final String MOD_ID = "mansifutilities";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	@Override

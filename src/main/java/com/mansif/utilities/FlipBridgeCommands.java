@@ -231,7 +231,13 @@ public final class FlipBridgeCommands {
                                                                                                             ctx,
                                                                                                             "on"));
                                                                                     return 1;
-                                                                                })))));
+                                                                                })))
+                                        .then(
+                                                ClientCommandManager.literal("hab")
+                                                        .executes(
+                                                                ctx ->
+                                                                        RecipeCommands.showHabanero(
+                                                                                ctx)))));
     }
 
     private static void status(FabricClientCommandSource source) {

@@ -4,9 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.tree.CommandNode;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -22,52 +20,21 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * {@code /recipe hab} — live Habanero Tactics IV craft cost from MansifTracker.
- * {@code /re} redirects to the same command tree.
+ * Live Habanero Tactics IV craft cost from MansifTracker.
+ *
+ * <p>Uses only {@code /hab} and {@code /mansifbridge hab}. Does not register {@code /recipe} or
+ * {@code /re} — those names must stay free for Hypixel's recipe command.
  */
 public final class RecipeCommands {
     public static void register() {
         ClientCommandRegistrationCallback.EVENT.register(
-                (dispatcher, registryAccess) -> {
-                    CommandNode<FabricClientCommandSource> recipeNode =
-                            dispatcher.register(
-                                    ClientCommandManager.literal("recipe")
-                                            .executes(ctx -> showHabanero(ctx))
-                                            .then(
-                                                    ClientCommandManager.argument(
-                                                                    "target",
-                                                                    StringArgumentType.greedyString())
-                                                            .executes(RecipeCommands::dispatchRecipe)));
-
-                    dispatcher.register(
-                            ClientCommandManager.literal("re").redirect(recipeNode));
-                });
+                (dispatcher, registryAccess) ->
+                        dispatcher.register(
+                                ClientCommandManager.literal("hab")
+                                        .executes(RecipeCommands::showHabanero)));
     }
 
-    private static int dispatchRecipe(CommandContext<FabricClientCommandSource> ctx) {
-        String target =
-                StringArgumentType.getString(ctx, "target").toLowerCase(Locale.ROOT).trim();
-        if (isHabaneroTarget(target)) {
-            return showHabanero(ctx);
-        }
-        ctx.getSource()
-                .sendError(
-                        Component.literal(
-                                        "[Mansif] Unknown recipe — try /recipe hab or /re hab")
-                                .withStyle(ChatFormatting.RED));
-        return 0;
-    }
-
-    private static boolean isHabaneroTarget(String target) {
-        if (target.isEmpty()) {
-            return true;
-        }
-        return target.contains("hab")
-                || target.contains("tactic")
-                || target.contains("pepper");
-    }
-
-    private static int showHabanero(CommandContext<FabricClientCommandSource> ctx) {
+    public static int showHabanero(CommandContext<FabricClientCommandSource> ctx) {
         FabricClientCommandSource source = ctx.getSource();
         Minecraft client = source.getClient();
         FlipBridgeConfig cfg = FlipBridgeConfig.loadAndSync();

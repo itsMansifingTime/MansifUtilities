@@ -72,6 +72,11 @@ public final class FlipBridgeConfig {
         return CONFIG_PATH;
     }
 
+    /** Defaults from the mod JAR (used by /mansifbridge direct with no args). */
+    public static FlipBridgeConfig bundledDefaults() {
+        return loadBundledDefaults();
+    }
+
     /** Pull apiBase/poll/enabled from MansifTracker (no auth). Updates config file on success. */
     public static boolean syncFromServer(FlipBridgeConfig cfg) {
         List<String> bases = candidateApiBases(cfg);

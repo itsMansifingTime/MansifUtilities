@@ -35,24 +35,80 @@ public final class FlipBridgeCommands {
                                                                 ctx -> {
                                                                     pollNow(ctx.getSource());
                                                                     return 1;
-                                                                }))
-                                        .then(
-                                                ClientCommandManager.literal("direct")
+                                                                })
                                                         .then(
                                                                 ClientCommandManager.argument(
-                                                                                "url",
-                                                                                StringArgumentType
-                                                                                        .greedyString())
+                                                                                "ms",
+                                                                                IntegerArgumentType
+                                                                                        .integer(
+                                                                                                500, 60000))
                                                                         .executes(
                                                                                 ctx -> {
-                                                                                    setDirectApi(
+                                                                                    setPoll(
                                                                                             ctx.getSource(),
+                                                                                            IntegerArgumentType
+                                                                                                    .getInteger(
+                                                                                                            ctx,
+                                                                                                            "ms"));
+                                                                                    return 1;
+                                                                                })))
+                                        .then(
+                                                ClientCommandManager.literal("direct")
+                                                        .executes(
+                                                                ctx -> {
+                                                                    setDirectFromDefaults(
+                                                                            ctx.getSource());
+                                                                    return 1;
+                                                                })
+                                                        .then(
+                                                                ClientCommandManager.argument(
+                                                                                "host",
+                                                                                StringArgumentType
+                                                                                        .string())
+                                                                        .executes(
+                                                                                ctx -> {
+                                                                                    String host =
                                                                                             StringArgumentType
                                                                                                     .getString(
                                                                                                             ctx,
-                                                                                                            "url"));
+                                                                                                            "host");
+                                                                                    setDirectApi(
+                                                                                            ctx
+                                                                                                    .getSource(),
+                                                                                            normalizeDirectUrl(
+                                                                                                    host,
+                                                                                                    3001));
                                                                                     return 1;
-                                                                                })))
+                                                                                })
+                                                                        .then(
+                                                                                ClientCommandManager
+                                                                                        .argument(
+                                                                                                "port",
+                                                                                                IntegerArgumentType
+                                                                                                        .integer(
+                                                                                                                1,
+                                                                                                                65535))
+                                                                                        .executes(
+                                                                                                ctx -> {
+                                                                                                    String
+                                                                                                            host =
+                                                                                                                    StringArgumentType
+                                                                                                                            .getString(
+                                                                                                                                    ctx,
+                                                                                                                                    "host");
+                                                                                                    int port =
+                                                                                                            IntegerArgumentType
+                                                                                                                    .getInteger(
+                                                                                                                            ctx,
+                                                                                                                            "port");
+                                                                                                    setDirectApi(
+                                                                                                            ctx
+                                                                                                                    .getSource(),
+                                                                                                            normalizeDirectUrl(
+                                                                                                                    host,
+                                                                                                                    port));
+                                                                                                    return 1;
+                                                                                                }))))
                                         .then(
                                                 ClientCommandManager.literal("api")
                                                         .then(
@@ -89,26 +145,6 @@ public final class FlipBridgeCommands {
                                                                                     setSecret(
                                                                                             ctx.getSource(),
                                                                                             secret);
-                                                                                    return 1;
-                                                                                })))
-                                        .then(
-                                                ClientCommandManager.literal("poll")
-                                                        .then(
-                                                                ClientCommandManager.argument(
-                                                                                "ms",
-                                                                                IntegerArgumentType
-                                                                                        .integer(
-                                                                                                500, 60000))
-                                                                        .executes(
-                                                                                ctx -> {
-                                                                                    int ms =
-                                                                                            IntegerArgumentType
-                                                                                                    .getInteger(
-                                                                                                            ctx,
-                                                                                                            "ms");
-                                                                                    setPoll(
-                                                                                            ctx.getSource(),
-                                                                                            ms);
                                                                                     return 1;
                                                                                 })))
                                         .then(
@@ -286,16 +322,41 @@ public final class FlipBridgeCommands {
                         .withStyle(ChatFormatting.GREEN));
     }
 
+    private static void setDirectFromDefaults(FabricClientCommandSource source) {
+        FlipBridgeConfig defaults = FlipBridgeConfig.bundledDefaults();
+        String direct = defaults.directApiBase;
+        if (direct == null || direct.isBlank()) {
+            source.sendFeedback(
+                    Component.literal(
+                                    "[MansifUtilities] No bundled direct URL — use /mansifbridge direct <ip> [port]")
+                            .withStyle(ChatFormatting.RED));
+            return;
+        }
+        setDirectApi(source, direct);
+    }
+
+    /** Accepts full URL or bare IP/hostname; default port 3001. */
+    private static String normalizeDirectUrl(String hostOrUrl, int port) {
+        String t = hostOrUrl.trim().replaceAll("/+$", "");
+        if (t.startsWith("http://") || t.startsWith("https://")) {
+            return t;
+        }
+        return "http://" + t + ":" + port;
+    }
+
     private static void setDirectApi(FabricClientCommandSource source, String url) {
+        String normalized = normalizeDirectUrl(url, 3001);
         FlipBridgeConfig.update(
                 cfg -> {
-                    cfg.directApiBase = url.trim().replaceAll("/+$", "");
+                    cfg.directApiBase = normalized.replaceAll("/+$", "");
                     cfg.enabled = true;
                 });
         FlipAlertBridge.reloadConfig();
         source.sendFeedback(
                 Component.literal(
-                                "[MansifUtilities] Saved directApiBase (polled first). Run /mansifbridge poll to test.")
+                                "[MansifUtilities] Saved directApiBase: "
+                                        + normalized
+                                        + " — /mansifbridge poll to test")
                         .withStyle(ChatFormatting.GREEN));
     }
 

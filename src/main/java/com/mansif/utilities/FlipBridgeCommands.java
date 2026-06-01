@@ -37,6 +37,23 @@ public final class FlipBridgeCommands {
                                                                     return 1;
                                                                 }))
                                         .then(
+                                                ClientCommandManager.literal("direct")
+                                                        .then(
+                                                                ClientCommandManager.argument(
+                                                                                "url",
+                                                                                StringArgumentType
+                                                                                        .greedyString())
+                                                                        .executes(
+                                                                                ctx -> {
+                                                                                    setDirectApi(
+                                                                                            ctx.getSource(),
+                                                                                            StringArgumentType
+                                                                                                    .getString(
+                                                                                                            ctx,
+                                                                                                            "url"));
+                                                                                    return 1;
+                                                                                })))
+                                        .then(
                                                 ClientCommandManager.literal("api")
                                                         .then(
                                                                 ClientCommandManager.argument(
@@ -102,6 +119,61 @@ public final class FlipBridgeCommands {
                                                                     return 1;
                                                                 }))
                                         .then(
+                                                ClientCommandManager.literal("hypixel")
+                                                        .then(
+                                                                ClientCommandManager.literal("clear")
+                                                                        .executes(
+                                                                                ctx -> {
+                                                                                    HypixelKeyHelper
+                                                                                            .clearKey(
+                                                                                                    ctx
+                                                                                                            .getSource());
+                                                                                    return 1;
+                                                                                }))
+                                                        .then(
+                                                                ClientCommandManager.argument(
+                                                                                "key",
+                                                                                StringArgumentType
+                                                                                        .word())
+                                                                        .executes(
+                                                                                ctx -> {
+                                                                                    HypixelKeyHelper
+                                                                                            .saveKey(
+                                                                                                    ctx
+                                                                                                            .getSource(),
+                                                                                                    StringArgumentType
+                                                                                                            .getString(
+                                                                                                                    ctx,
+                                                                                                                    "key"),
+                                                                                                    HypixelKeyHelper
+                                                                                                            .defaultValidDays());
+                                                                                    return 1;
+                                                                                })
+                                                                        .then(
+                                                                                ClientCommandManager
+                                                                                        .argument(
+                                                                                                "days",
+                                                                                                IntegerArgumentType
+                                                                                                        .integer(
+                                                                                                                1,
+                                                                                                                365))
+                                                                                        .executes(
+                                                                                                ctx -> {
+                                                                                                    HypixelKeyHelper
+                                                                                                            .saveKey(
+                                                                                                                    ctx
+                                                                                                                            .getSource(),
+                                                                                                                    StringArgumentType
+                                                                                                                            .getString(
+                                                                                                                                    ctx,
+                                                                                                                                    "key"),
+                                                                                                                    IntegerArgumentType
+                                                                                                                            .getInteger(
+                                                                                                                                    ctx,
+                                                                                                                                    "days"));
+                                                                                                    return 1;
+                                                                                                }))))
+                                        .then(
                                                 ClientCommandManager.literal("disable")
                                                         .executes(
                                                                 ctx -> {
@@ -145,8 +217,19 @@ public final class FlipBridgeCommands {
                                                 + (cfg.apiBase == null || cfg.apiBase.isBlank()
                                                         ? "(empty)"
                                                         : cfg.apiBase)))
+                        .append(
+                                Component.literal(
+                                        "\n  directApiBase: "
+                                                + (cfg.directApiBase == null
+                                                                || cfg.directApiBase.isBlank()
+                                                        ? "(empty)"
+                                                        : cfg.directApiBase)))
                         .append(Component.literal("\n  secret: " + secretState))
                         .append(Component.literal("\n  pollIntervalMs: " + cfg.pollIntervalMs))
+                        .append(
+                                Component.literal(
+                                        "\n  hypixelApiKey: "
+                                                + HypixelKeyHelper.hypixelKeyStatusLine(cfg)))
                         .append(
                                 Component.literal(
                                                 "\n  ready: "
@@ -200,6 +283,19 @@ public final class FlipBridgeCommands {
         FlipAlertBridge.reloadConfig();
         source.sendFeedback(
                 Component.literal("[MansifUtilities] Saved apiBase to config file.")
+                        .withStyle(ChatFormatting.GREEN));
+    }
+
+    private static void setDirectApi(FabricClientCommandSource source, String url) {
+        FlipBridgeConfig.update(
+                cfg -> {
+                    cfg.directApiBase = url.trim().replaceAll("/+$", "");
+                    cfg.enabled = true;
+                });
+        FlipAlertBridge.reloadConfig();
+        source.sendFeedback(
+                Component.literal(
+                                "[MansifUtilities] Saved directApiBase (polled first). Run /mansifbridge poll to test.")
                         .withStyle(ChatFormatting.GREEN));
     }
 

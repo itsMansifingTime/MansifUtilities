@@ -66,8 +66,16 @@ public final class BazaarLog {
             if (!s.contains("[Bazaar]")) return;
             tryParseAndRecord(s);
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> saveToDisk());
-        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> saveToDisk());
+        ClientPlayConnectionEvents.DISCONNECT.register(
+                (handler, client) -> {
+                    BazaarPortfolioSync.flush();
+                    saveToDisk();
+                });
+        ClientLifecycleEvents.CLIENT_STOPPING.register(
+                client -> {
+                    BazaarPortfolioSync.flush();
+                    saveToDisk();
+                });
         Runtime.getRuntime().addShutdownHook(new Thread(BazaarLog::saveToDiskQuietly, "MansifUtilities-bazaar-save"));
     }
 
@@ -107,7 +115,10 @@ public final class BazaarLog {
     private static void addTxn(
             long epochMs, String kind, String itemName, int quantity, double pricePerUnit, boolean instant) {
         if (quantity <= 0) return;
-        TRANSACTIONS.add(new Transaction(epochMs, kind, itemName, quantity, round1(pricePerUnit), instant));
+        Transaction tx =
+                new Transaction(epochMs, kind, itemName, quantity, round1(pricePerUnit), instant);
+        TRANSACTIONS.add(tx);
+        BazaarPortfolioSync.enqueue(tx);
     }
 
     /** Coins per unit from a line total, rounded to one decimal. */

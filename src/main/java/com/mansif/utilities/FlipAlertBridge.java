@@ -17,10 +17,12 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -81,6 +83,17 @@ public final class FlipAlertBridge {
                                 category));
 
         ClientTickEvents.END_CLIENT_TICK.register(FlipAlertBridge::onClientTick);
+
+        Thread hypixelSync =
+                new Thread(
+                        () -> {
+                            FlipBridgeConfig cfg = FlipBridgeConfig.loadAndSync();
+                            HypixelKeyHelper.syncExpiryFromServer(cfg);
+                        },
+                        "mansifutilities-hypixel-key-sync");
+        hypixelSync.setDaemon(true);
+        hypixelSync.start();
+
         MansifUtilities.LOGGER.info(
                 "Flip alert bridge: {}",
                 config.isUsable()
@@ -89,6 +102,8 @@ public final class FlipAlertBridge {
     }
 
     private static void onClientTick(Minecraft client) {
+        HypixelKeyHelper.tickExpiryReminder(client, config);
+
         if (config.isUsable()) {
             long now = System.currentTimeMillis();
             int interval = Math.max(500, config.pollIntervalMs);
@@ -123,87 +138,128 @@ public final class FlipAlertBridge {
         viewKeyPrev = isDown;
     }
 
+    private static final int CONNECT_TIMEOUT_MS = 6000;
+    private static final int READ_TIMEOUT_MS = 12000;
+
     private static void pollFeed(Minecraft client) {
         try {
             long sinceQuery = catchUpPoll ? 0L : lastSeenMs;
             catchUpPoll = false;
-            String url = config.feedUrl(sinceQuery);
-            HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(8000);
-            conn.setRequestProperty("Authorization", "Bearer " + config.secret.trim());
-            conn.setRequestProperty("Accept", "application/json");
-            int code = conn.getResponseCode();
-            if (code != 200) {
-                MansifUtilities.LOGGER.warn("Flip feed HTTP {} from {}", code, config.apiBase);
+            List<String> bases = config.pollApiBasesInOrder();
+            if (bases.isEmpty()) {
                 notifyPollFailure(
-                        client,
-                        code == 401
-                                ? "feed auth failed (wrong secret?)"
-                                : "feed HTTP " + code);
+                        client, "no API URL — /mansifbridge sync or /mansifbridge direct <url>");
                 return;
             }
-            byte[] body = conn.getInputStream().readAllBytes();
-            JsonObject root = JsonParser.parseString(new String(body, StandardCharsets.UTF_8)).getAsJsonObject();
-            if (!root.has("flips") || !root.get("flips").isJsonArray()) {
-                return;
-            }
-            JsonArray flips = root.getAsJsonArray("flips");
-            long maxSeen = lastSeenMs;
-            for (JsonElement el : flips) {
-                if (!el.isJsonObject()) continue;
-                JsonObject flip = el.getAsJsonObject();
-                String id = stringField(flip, "id");
-                if (id == null || !seenFlipIds.add(id)) continue;
-                long sentAt = flip.has("sentAtMs") ? flip.get("sentAtMs").getAsLong() : 0L;
-                if (sentAt > maxSeen) maxSeen = sentAt;
 
-                String itemName = stringField(flip, "itemName");
-                String tag = stringField(flip, "tag");
-                long margin = flip.has("margin") ? flip.get("margin").getAsLong() : 0L;
-                long startingBid =
-                        flip.has("startingBid") ? flip.get("startingBid").getAsLong() : 0L;
-                String auctionForCmd = stringField(flip, "auctionIdForCommand");
-                String viewCommand = stringField(flip, "viewCommand");
-                if (auctionForCmd == null) continue;
-                if (viewCommand == null || viewCommand.isBlank()) {
-                    viewCommand = "/viewauction " + auctionForCmd;
+            Exception lastError = null;
+            for (String base : bases) {
+                try {
+                    pollFeedFromBase(client, base, sinceQuery);
+                    return;
+                } catch (AuthFailureException e) {
+                    notifyPollFailure(client, "feed auth failed (wrong secret?)");
+                    return;
+                } catch (Exception e) {
+                    lastError = e;
+                    MansifUtilities.LOGGER.debug("Flip feed failed for {}: {}", base, e.toString());
                 }
+            }
 
-                String finalViewCommand = viewCommand;
-                String finalAuctionForCmd = auctionForCmd;
-                client.execute(
-                        () ->
-                                onNewFlip(
-                                        client,
-                                        itemName != null ? itemName : "Flip",
-                                        tag != null ? tag : "",
-                                        margin,
-                                        startingBid,
-                                        finalAuctionForCmd,
-                                        finalViewCommand));
-            }
-            if (maxSeen > lastSeenMs) {
-                lastSeenMs = maxSeen;
-            }
-            while (seenFlipIds.size() > 500) {
-                seenFlipIds.clear();
-            }
-        } catch (Exception e) {
-            MansifUtilities.LOGGER.warn("Flip feed poll failed: {}", e.toString());
-            String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-            notifyPollFailure(
-                    client,
-                    "cannot reach API ("
-                            + config.apiBase
-                            + ") — "
-                            + msg
-                            + ". Open port 3001 or use SSH tunnel.");
+            String detail =
+                    lastError != null && lastError.getMessage() != null
+                            ? lastError.getMessage()
+                            : "connection failed";
+            notifyPollFailure(client, formatPollFailureDetail(bases, detail));
         } finally {
             pollInFlight.set(false);
         }
     }
+
+    private static void pollFeedFromBase(Minecraft client, String base, long sinceQuery)
+            throws Exception {
+        String url = config.feedUrlForBase(base, sinceQuery);
+        HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
+        conn.setReadTimeout(READ_TIMEOUT_MS);
+        conn.setRequestProperty("Authorization", "Bearer " + config.secret.trim());
+        conn.setRequestProperty("Accept", "application/json");
+        int code = conn.getResponseCode();
+        if (code == 401) {
+            throw new AuthFailureException();
+        }
+        if (code != 200) {
+            throw new IOException("HTTP " + code + " from " + base);
+        }
+        byte[] body = conn.getInputStream().readAllBytes();
+        JsonObject root =
+                JsonParser.parseString(new String(body, StandardCharsets.UTF_8)).getAsJsonObject();
+        if (!root.has("flips") || !root.get("flips").isJsonArray()) {
+            return;
+        }
+        JsonArray flips = root.getAsJsonArray("flips");
+        long maxSeen = lastSeenMs;
+        for (JsonElement el : flips) {
+            if (!el.isJsonObject()) continue;
+            JsonObject flip = el.getAsJsonObject();
+            String id = stringField(flip, "id");
+            if (id == null || !seenFlipIds.add(id)) continue;
+            long sentAt = flip.has("sentAtMs") ? flip.get("sentAtMs").getAsLong() : 0L;
+            if (sentAt > maxSeen) maxSeen = sentAt;
+
+            String itemName = stringField(flip, "itemName");
+            String tag = stringField(flip, "tag");
+            long margin = flip.has("margin") ? flip.get("margin").getAsLong() : 0L;
+            long startingBid =
+                    flip.has("startingBid") ? flip.get("startingBid").getAsLong() : 0L;
+            String auctionForCmd = stringField(flip, "auctionIdForCommand");
+            String viewCommand = stringField(flip, "viewCommand");
+            String viewSellerCommand = stringField(flip, "viewSellerCommand");
+            String sellerName = stringField(flip, "sellerName");
+            if (auctionForCmd == null) continue;
+            if (viewCommand == null || viewCommand.isBlank()) {
+                viewCommand = "/viewauction " + auctionForCmd;
+            }
+            if ((viewSellerCommand == null || viewSellerCommand.isBlank())
+                    && sellerName != null
+                    && !sellerName.isBlank()) {
+                viewSellerCommand = "/ah " + sellerName.trim();
+            }
+
+            String finalViewCommand = viewCommand;
+            String finalViewSellerCommand = viewSellerCommand;
+            String finalAuctionForCmd = auctionForCmd;
+            client.execute(
+                    () ->
+                            onNewFlip(
+                                    client,
+                                    itemName != null ? itemName : "Flip",
+                                    tag != null ? tag : "",
+                                    margin,
+                                    startingBid,
+                                    finalAuctionForCmd,
+                                    finalViewCommand,
+                                    finalViewSellerCommand));
+        }
+        if (maxSeen > lastSeenMs) {
+            lastSeenMs = maxSeen;
+        }
+        while (seenFlipIds.size() > 500) {
+            seenFlipIds.clear();
+        }
+    }
+
+    private static String formatPollFailureDetail(List<String> bases, String detail) {
+        String primary = bases.isEmpty() ? "(none)" : bases.get(0);
+        String hint =
+                primary.contains("vercel.app")
+                        ? " Vercel timed out reaching EC2 — use /mansifbridge direct http://YOUR_IP:3001 or /mansifbridge sync after EC2 config update."
+                        : " Check EC2 security group (TCP 3001) and pm2 on :3001.";
+        return "cannot reach flip API (" + primary + ") — " + detail + "." + hint;
+    }
+
+    private static final class AuthFailureException extends Exception {}
 
     private static void notifyPollFailure(Minecraft client, String detail) {
         long now = System.currentTimeMillis();
@@ -217,8 +273,12 @@ public final class FlipAlertBridge {
                         return;
                     }
                     client.player.displayClientMessage(
-                            Component.literal("[Flip] " + detail)
-                                    .withStyle(ChatFormatting.RED),
+                            mansifPrefix()
+                                    .append(
+                                            Component.literal(detail)
+                                                    .withStyle(
+                                                            ChatFormatting.RED,
+                                                            ChatFormatting.BOLD)),
                             false);
                 });
     }
@@ -230,34 +290,34 @@ public final class FlipAlertBridge {
             long margin,
             long startingBid,
             String auctionIdForCommand,
-            String viewCommand) {
+            String viewCommand,
+            String viewSellerCommand) {
         latestAuctionIdForCommand = auctionIdForCommand;
         latestViewCommand = viewCommand;
 
         MutableComponent msg =
-                Component.literal("[Flip] ")
-                        .withStyle(ChatFormatting.GOLD)
-                        .append(Component.literal(itemName).withStyle(ChatFormatting.WHITE));
+                mansifPrefix()
+                        .append(
+                                Component.literal(itemName)
+                                        .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
         if (!tag.isBlank()) {
-            msg.append(Component.literal(" (" + tag + ")").withStyle(ChatFormatting.GRAY));
+            msg.append(
+                    Component.literal(" (" + tag + ")")
+                            .withStyle(ChatFormatting.DARK_AQUA));
         }
         msg.append(
                         Component.literal(
                                         " +" + formatCoins(margin) + " under craft, BIN "
                                                 + formatCoins(startingBid))
-                                .withStyle(ChatFormatting.GREEN))
-                .append(
-                        Component.literal(" [View]")
-                                .withStyle(
-                                        style ->
-                                                style.withColor(ChatFormatting.AQUA)
-                                                        .withClickEvent(
-                                                                new ClickEvent.RunCommand(
-                                                                        viewCommand))
-                                                        .withHoverEvent(
-                                                                new HoverEvent.ShowText(
-                                                                        Component.literal(
-                                                                                viewCommand)))));
+                                .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD))
+                .append(clickableCommand(" [View]", viewCommand, ChatFormatting.YELLOW));
+        if (viewSellerCommand != null && !viewSellerCommand.isBlank()) {
+            msg.append(
+                    clickableCommand(
+                            " [View seller auctions]",
+                            viewSellerCommand,
+                            ChatFormatting.LIGHT_PURPLE));
+        }
         if (client.player != null) {
             client.player.displayClientMessage(msg, false);
         }
@@ -271,8 +331,12 @@ public final class FlipAlertBridge {
         if (cmd == null || cmd.isBlank()) {
             if (latestAuctionIdForCommand == null || latestAuctionIdForCommand.isBlank()) {
                 client.player.displayClientMessage(
-                        Component.literal("[Flip] No flip yet — wait for an alert.")
-                                .withStyle(ChatFormatting.RED),
+                        mansifPrefix()
+                                .append(
+                                        Component.literal("No flip yet — wait for an alert.")
+                                                .withStyle(
+                                                        ChatFormatting.RED,
+                                                        ChatFormatting.BOLD)),
                         false);
                 return;
             }
@@ -280,6 +344,24 @@ public final class FlipAlertBridge {
         }
         String withoutSlash = cmd.startsWith("/") ? cmd.substring(1) : cmd;
         client.player.connection.sendCommand(withoutSlash);
+    }
+
+    private static MutableComponent mansifPrefix() {
+        return Component.literal("[Mansif] ").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+    }
+
+    private static MutableComponent clickableCommand(
+            String label, String command, ChatFormatting color) {
+        return Component.literal(label)
+                .withStyle(
+                        style ->
+                                style.withColor(color)
+                                        .withBold(true)
+                                        .withClickEvent(new ClickEvent.RunCommand(command))
+                                        .withHoverEvent(
+                                                new HoverEvent.ShowText(
+                                                        Component.literal(command)
+                                                                .withStyle(color, ChatFormatting.BOLD))));
     }
 
     private static String stringField(JsonObject obj, String key) {

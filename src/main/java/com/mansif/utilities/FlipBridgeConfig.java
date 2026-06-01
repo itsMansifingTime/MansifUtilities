@@ -28,9 +28,15 @@ public final class FlipBridgeConfig {
 
     public boolean enabled = true;
     public String apiBase = "";
+    /** EC2 :3001 when open to your PC — tried before apiBase (avoids slow Vercel proxy). */
+    public String directApiBase = "";
     /** Same as `feedSecret` in data/bin-deal-ingame-bridge.json on the server. */
     public String secret = "";
     public int pollIntervalMs = 2000;
+    /** Hypixel developer API key (for server seller lookup via POST /api/bin-deal-hypixel-key). */
+    public String hypixelApiKey = "";
+    /** Unix ms — dev keys last ~3 days; reminder fires within 3 days of this time. */
+    public long hypixelApiKeyExpiresAtMs = 0L;
 
     /** Load, normalize, merge defaults, and write the file when anything changed. */
     public static FlipBridgeConfig loadAndSync() {
@@ -86,6 +92,13 @@ public final class FlipBridgeConfig {
                 cfg.pollIntervalMs = remote.pollIntervalMs;
                 changed = true;
             }
+            if (remote.directApiBase != null && !remote.directApiBase.isBlank()) {
+                String normalized = remote.directApiBase.trim().replaceAll("/+$", "");
+                if (!normalized.equals(cfg.directApiBase)) {
+                    cfg.directApiBase = normalized;
+                    changed = true;
+                }
+            }
             if (cfg.enabled != remote.enabled) {
                 cfg.enabled = remote.enabled;
                 changed = true;
@@ -109,8 +122,29 @@ public final class FlipBridgeConfig {
     }
 
     public String feedUrl(long sinceMs) {
-        String base = apiBase.trim().replaceAll("/+$", "");
-        return base + "/api/bin-deal-ingame-feed?since=" + sinceMs;
+        return feedUrlForBase(pollApiBase(), sinceMs);
+    }
+
+    public String feedUrlForBase(String base, long sinceMs) {
+        String normalized = base.trim().replaceAll("/+$", "");
+        return normalized + "/api/bin-deal-ingame-feed?since=" + sinceMs;
+    }
+
+    /** First base to poll: direct EC2 when set, otherwise public apiBase. */
+    public String pollApiBase() {
+        if (directApiBase != null && !directApiBase.isBlank() && !isPlaceholder(directApiBase)) {
+            return directApiBase.trim().replaceAll("/+$", "");
+        }
+        return apiBase == null ? "" : apiBase.trim().replaceAll("/+$", "");
+    }
+
+    /** Bases to try in order when polling (direct, then public, then localhost). */
+    public List<String> pollApiBasesInOrder() {
+        List<String> out = new ArrayList<>();
+        addCandidate(out, directApiBase);
+        addCandidate(out, apiBase);
+        addCandidate(out, "http://127.0.0.1:3001");
+        return out;
     }
 
     private static FlipBridgeConfig readDiskOrNew() {
@@ -129,7 +163,8 @@ public final class FlipBridgeConfig {
 
     private static FlipBridgeConfig loadBundledDefaults() {
         try (InputStream in =
-                MansifUtilities.class.getResourceAsStream("/assets/MansifUtilities/flip-bridge-defaults.json")) {
+                MansifUtilities.class.getResourceAsStream(
+                        "/assets/mansifutilities/flip-bridge-defaults.json")) {
             if (in == null) {
                 return new FlipBridgeConfig();
             }
@@ -186,6 +221,34 @@ public final class FlipBridgeConfig {
                 cfg.secret = "";
                 changed = true;
             }
+        }
+        if (cfg.directApiBase != null) {
+            String trimmed = cfg.directApiBase.trim().replaceAll("/+$", "");
+            if (!trimmed.equals(cfg.directApiBase)) {
+                cfg.directApiBase = trimmed;
+                changed = true;
+            }
+            if (isPlaceholder(trimmed)) {
+                cfg.directApiBase = "";
+                changed = true;
+            }
+        } else {
+            cfg.directApiBase = "";
+            changed = true;
+        }
+        if (cfg.hypixelApiKey != null) {
+            String trimmed = cfg.hypixelApiKey.trim();
+            if (!trimmed.equals(cfg.hypixelApiKey)) {
+                cfg.hypixelApiKey = trimmed;
+                changed = true;
+            }
+            if (isPlaceholder(trimmed)) {
+                cfg.hypixelApiKey = "";
+                changed = true;
+            }
+        } else {
+            cfg.hypixelApiKey = "";
+            changed = true;
         }
         if (cfg.pollIntervalMs < 500) {
             cfg.pollIntervalMs = 2000;

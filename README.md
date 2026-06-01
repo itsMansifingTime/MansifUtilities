@@ -1,6 +1,6 @@
 # MansifUtilities
 
-Fabric 1.21.11 client mod — flip alerts, bazaar log, inventory helpers for Hypixel SkyBlock (pairs with [MansifTracker](https://github.com/itsMansifingTime/mansiftracker)).
+Fabric 1.21.11 client mod — flip alerts, bazaar log (syncs to [MansifTracker](https://github.com/itsMansifingTime/mansiftracker) `/bazaar-portfolio`), inventory helpers for Hypixel SkyBlock.
 
 ## Build
 

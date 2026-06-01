@@ -19,13 +19,18 @@ When the BIN deal scanner sends a flip to Discord, the same flip is queued on th
 |---------|--------|
 | `/mansifbridge status` | Show config path and readiness |
 | `/mansifbridge sync` | Pull `apiBase` from server `/api/bin-deal-ingame-bridge-config` |
-| `/mansifbridge api <url>` | Set and save API base |
+| `/mansifbridge api <url>` | Set and save public API base (HTTPS / Vercel) |
+| `/mansifbridge direct <url>` | Set EC2 URL (`http://IP:3001`) — polled **first** (avoids Vercel proxy timeouts) |
 | `/mansifbridge secret <value>` | Set and save feed secret |
+| `/mansifbridge hypixel <key>` | Save Hypixel API key (3-day expiry default) and push to EC2 for seller `/ah` lookups |
+| `/mansifbridge hypixel <key> <days>` | Same with custom expiry (e.g. personal key) |
+| `/mansifbridge hypixel clear` | Clear local key metadata |
 | `/mansifbridge poll <ms>` | Poll interval (500–60000) |
 | `/mansifbridge enable` / `disable` | Toggle polling |
 
 4. In **Controls → Key Binds → MansifUtilities Flip Alerts**, bind **View latest flip auction** (default `V`).
-5. When a flip arrives, chat shows a green summary with a clickable **[View]**. Press your keybind to run `/viewauction` for that flip.
+5. When a flip arrives, chat shows a summary with **[View]** (`/viewauction`) and **[View seller auctions]** (`/ah <seller>`) when the server resolves the seller via your Hypixel key.
+6. Within **3 days** of key expiry, chat warns you to renew at [developer.hypixel.net](https://developer.hypixel.net/).
 
 ## Notes
 

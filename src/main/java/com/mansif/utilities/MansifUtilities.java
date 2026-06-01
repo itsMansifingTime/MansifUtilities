@@ -13,11 +13,15 @@ public class MansifUtilities implements ClientModInitializer {
     public void onInitializeClient() {
         LOGGER.info("Hello Fabric world! ~Mansif mod active");
 
+        // Write bundled defaults to config on first launch (persists across sessions).
+        FlipBridgeConfig.loadAndSync();
+
         InventoryReader.registerHooks();
         DebugHudRenderer.registerHooks();
         InventoryHighlighter.registerHooks();
         BazaarLog.registerHooks();
         FlipBridgeCommands.register();
+        RecipeCommands.register();
         FlipAlertBridge.registerHooks();
 //        ItemHoverDisplay.registerHooks();
     }

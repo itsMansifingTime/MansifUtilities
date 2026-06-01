@@ -130,10 +130,16 @@ public final class HypixelKeyHelper {
         if (!cfg.isUsable()) {
             return;
         }
+        for (String base : cfg.pollApiBasesInOrder()) {
+            if (trySyncExpiryFromBase(cfg, base)) {
+                return;
+            }
+        }
+    }
+
+    private static boolean trySyncExpiryFromBase(FlipBridgeConfig cfg, String base) {
         try {
-            String url =
-                    cfg.apiBase.trim().replaceAll("/+$", "")
-                            + "/api/bin-deal-hypixel-key";
+            String url = base.trim().replaceAll("/+$", "") + "/api/bin-deal-hypixel-key";
             HttpURLConnection conn =
                     (HttpURLConnection) URI.create(url).toURL().openConnection();
             conn.setRequestMethod("GET");
@@ -142,18 +148,18 @@ public final class HypixelKeyHelper {
             conn.setRequestProperty("Authorization", "Bearer " + cfg.secret.trim());
             conn.setRequestProperty("Accept", "application/json");
             if (conn.getResponseCode() != 200) {
-                return;
+                return false;
             }
             byte[] body = conn.getInputStream().readAllBytes();
             JsonObject root =
                     JsonParser.parseString(new String(body, StandardCharsets.UTF_8))
                             .getAsJsonObject();
             if (!root.has("expiresAtMs") || root.get("expiresAtMs").isJsonNull()) {
-                return;
+                return false;
             }
             long expiresAtMs = root.get("expiresAtMs").getAsLong();
             if (expiresAtMs <= 0) {
-                return;
+                return false;
             }
             FlipBridgeConfig.update(
                     local -> {
@@ -161,8 +167,10 @@ public final class HypixelKeyHelper {
                             local.hypixelApiKeyExpiresAtMs = expiresAtMs;
                         }
                     });
+            return true;
         } catch (Exception e) {
-            MansifUtilities.LOGGER.debug("Hypixel key status sync failed: {}", e.toString());
+            MansifUtilities.LOGGER.debug("Hypixel key status sync from {} failed: {}", base, e.toString());
+            return false;
         }
     }
 
@@ -171,37 +179,38 @@ public final class HypixelKeyHelper {
         if (!cfg.isUsable()) {
             return "Server not updated (set api + secret first).";
         }
-        try {
-            String url =
-                    cfg.apiBase.trim().replaceAll("/+$", "")
-                            + "/api/bin-deal-hypixel-key";
-            String json =
-                    "{\"apiKey\":\""
-                            + escapeJson(apiKey)
-                            + "\",\"expiresAtMs\":"
-                            + expiresAtMs
-                            + ",\"validDays\":"
-                            + validDays
-                            + "}";
-            HttpURLConnection conn =
-                    (HttpURLConnection) URI.create(url).toURL().openConnection();
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(8000);
-            conn.setRequestProperty("Authorization", "Bearer " + cfg.secret.trim());
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("Accept", "application/json");
-            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-            conn.getOutputStream().write(bytes);
-            int code = conn.getResponseCode();
-            if (code == 200) {
-                return "Server updated for seller lookups.";
+        String json =
+                "{\"apiKey\":\""
+                        + escapeJson(apiKey)
+                        + "\",\"expiresAtMs\":"
+                        + expiresAtMs
+                        + ",\"validDays\":"
+                        + validDays
+                        + "}";
+        for (String base : cfg.pollApiBasesInOrder()) {
+            try {
+                String url = base.trim().replaceAll("/+$", "") + "/api/bin-deal-hypixel-key";
+                HttpURLConnection conn =
+                        (HttpURLConnection) URI.create(url).toURL().openConnection();
+                conn.setRequestMethod("POST");
+                conn.setDoOutput(true);
+                conn.setConnectTimeout(8000);
+                conn.setReadTimeout(8000);
+                conn.setRequestProperty("Authorization", "Bearer " + cfg.secret.trim());
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("Accept", "application/json");
+                byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+                conn.getOutputStream().write(bytes);
+                int code = conn.getResponseCode();
+                if (code == 200) {
+                    return "Server updated for seller lookups.";
+                }
+            } catch (Exception e) {
+                MansifUtilities.LOGGER.debug(
+                        "Hypixel key push to {} failed: {}", base, e.toString());
             }
-            return "Server HTTP " + code + " (key saved locally only).";
-        } catch (Exception e) {
-            return "Server unreachable (" + e.getMessage() + ") — key saved locally only.";
         }
+        return "Server unreachable — key saved locally only.";
     }
 
     private static String escapeJson(String s) {

@@ -117,13 +117,24 @@ public final class FlipBridgeConfig {
     }
 
     public boolean isUsable() {
-        return enabled
-                && apiBase != null
-                && !apiBase.isBlank()
-                && !isPlaceholder(apiBase)
-                && secret != null
-                && !secret.isBlank()
-                && !isPlaceholder(secret);
+        return enabled && hasValidApiEndpoint() && hasValidSecret();
+    }
+
+    /** True when apiBase or directApiBase is set (either is enough to reach MansifTracker). */
+    public boolean hasValidApiEndpoint() {
+        return hasValidBaseUrl(apiBase) || hasValidBaseUrl(directApiBase);
+    }
+
+    private static boolean hasValidBaseUrl(String base) {
+        return base != null && !base.isBlank() && !isPlaceholder(base);
+    }
+
+    private static boolean hasValidSecret(String secret) {
+        return secret != null && !secret.isBlank() && !isPlaceholder(secret);
+    }
+
+    public boolean hasValidSecret() {
+        return hasValidSecret(secret);
     }
 
     public String feedUrl(long sinceMs) {
@@ -148,6 +159,10 @@ public final class FlipBridgeConfig {
         List<String> out = new ArrayList<>();
         addCandidate(out, directApiBase);
         addCandidate(out, apiBase);
+        FlipBridgeConfig defaults = loadBundledDefaults();
+        addCandidate(out, defaults.directApiBase);
+        addCandidate(out, defaults.apiBase);
+        addCandidate(out, "https://api.mansif.dev");
         addCandidate(out, "http://127.0.0.1:3001");
         return out;
     }
@@ -190,6 +205,11 @@ public final class FlipBridgeConfig {
         }
         if (isBlankOrPlaceholder(cfg.apiBase) && !isBlankOrPlaceholder(defaults.apiBase)) {
             cfg.apiBase = defaults.apiBase;
+            changed = true;
+        }
+        if (isBlankOrPlaceholder(cfg.directApiBase)
+                && !isBlankOrPlaceholder(defaults.directApiBase)) {
+            cfg.directApiBase = defaults.directApiBase;
             changed = true;
         }
         if (isBlankOrPlaceholder(cfg.secret) && !isBlankOrPlaceholder(defaults.secret)) {
@@ -290,9 +310,12 @@ public final class FlipBridgeConfig {
 
     private static List<String> candidateApiBases(FlipBridgeConfig cfg) {
         List<String> out = new ArrayList<>();
+        addCandidate(out, cfg.directApiBase);
         addCandidate(out, cfg.apiBase);
         FlipBridgeConfig defaults = loadBundledDefaults();
+        addCandidate(out, defaults.directApiBase);
         addCandidate(out, defaults.apiBase);
+        addCandidate(out, "https://api.mansif.dev");
         addCandidate(out, "http://127.0.0.1:3001");
         return out;
     }

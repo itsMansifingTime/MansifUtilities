@@ -21,12 +21,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /*
-Examples (see latest.log):
-[Bazaar] Bought 1x Oak Log for 16.0 coins!
-[Bazaar] Sold 1x Oak Log for 7.2 coins!
-[Bazaar] Claimed 15.7 coins from selling 1x Oak Log at 15.9 each!
-[Bazaar] Claimed 1x Oak Log worth 7.3 coins bought for 7.3 each!
-*/
+ * Recorded fills only (4 patterns):
+ *
+ * BUY instant:
+ *   [Bazaar] Bought 1x ✎ Flawless Sapphire Gemstone for 2,741,172 coins!
+ * BUY order claim (filled buy order):
+ *   [Bazaar] Claimed 27x ✎ Flawless Sapphire Gemstone worth 68,404,740 coins bought for 2,533,509 each!
+ *
+ * SELL instant:
+ *   [Bazaar] Sold 1x Crude Gabagool for 210.1 coins!
+ * SELL order claim (filled sell order):
+ *   [Bazaar] Claimed 1.0 coins from selling 1x Crude Gabagool at 1.0 each!
+ *
+ * Ignored (not a fill):
+ *   [Bazaar] Sell Offer Setup! 1x Counter-Strike V for 55,139,901 coins.
+ *   [Bazaar] Buy Offer Setup! ...
+ */
 
 public final class BazaarLog {
     public static final Logger LOGGER = MansifUtilities.LOGGER;
@@ -93,42 +103,106 @@ public final class BazaarLog {
         Runtime.getRuntime().addShutdownHook(new Thread(BazaarLog::saveToDiskQuietly, "MansifUtilities-bazaar-save"));
     }
 
+    /** Order placement/cancel chat — not an instant fill or claim. */
+    private static boolean isIgnoredBazaarNotice(String body) {
+        return body.contains("Offer Setup")
+                || body.startsWith("Cancelled ")
+                || body.startsWith("Canceled ")
+                || body.contains(" offer cancelled")
+                || body.contains(" offer canceled");
+    }
+
     private static void tryParseAndRecord(String raw) {
         int tag = raw.indexOf("[Bazaar]");
         if (tag < 0) return;
         String body = raw.substring(tag + "[Bazaar]".length()).trim();
+        if (isIgnoredBazaarNotice(body)) {
+            return;
+        }
         long now = System.currentTimeMillis();
 
-        Matcher m = BUY_INSTANT.matcher(body);
+        Matcher         m = BUY_INSTANT.matcher(body);
         if (m.matches()) {
             int qty = parseQuantity(m.group(1));
             double total = parseCoins(m.group(3));
-            addTxn(now, "BUY", m.group(2).trim(), qty, perUnitFromTotal(total, qty), true);
+            addTxn(
+                    now,
+                    "BUY",
+                    normalizeItemName(m.group(2)),
+                    qty,
+                    perUnitFromTotal(total, qty),
+                    true);
             return;
         }
         m = SELL_INSTANT.matcher(body);
         if (m.matches()) {
             int qty = parseQuantity(m.group(1));
             double total = parseCoins(m.group(3));
-            addTxn(now, "SELL", m.group(2).trim(), qty, perUnitFromTotal(total, qty), true);
-            return;
-        }
-        m = SELL_ORDER_CLAIM.matcher(body);
-        if (m.matches()) {
-            int qty = parseQuantity(m.group(2));
-            addTxn(now, "SELL", m.group(3).trim(), qty, round1(parseCoins(m.group(4))), false);
+            addTxn(
+                    now,
+                    "SELL",
+                    normalizeItemName(m.group(2)),
+                    qty,
+                    perUnitFromTotal(total, qty),
+                    true);
             return;
         }
         m = BUY_ORDER_CLAIM.matcher(body);
         if (m.matches()) {
             int qty = parseQuantity(m.group(1));
-            addTxn(now, "BUY", m.group(2).trim(), qty, round1(parseCoins(m.group(4))), false);
+            addTxn(
+                    now,
+                    "BUY",
+                    normalizeItemName(m.group(2)),
+                    qty,
+                    round1(parseCoins(m.group(4))),
+                    false);
+            return;
         }
+        m = SELL_ORDER_CLAIM.matcher(body);
+        if (m.matches()) {
+            int qty = parseQuantity(m.group(2));
+            addTxn(
+                    now,
+                    "SELL",
+                    normalizeItemName(m.group(3)),
+                    qty,
+                    round1(parseCoins(m.group(4))),
+                    false);
+        }
+    }
+
+    /** Strip chat glyphs (e.g. ✎) before the real item name. */
+    static String normalizeItemName(String raw) {
+        if (raw == null) return "";
+        String s = raw.trim();
+        int i = 0;
+        while (i < s.length()) {
+            char c = s.charAt(i);
+            if (Character.isLetterOrDigit(c)) break;
+            i++;
+        }
+        return s.substring(i).trim();
+    }
+
+    private static final java.util.Set<String> HAB_MATERIALS =
+            java.util.Set.of(
+                    "Chili Pepper",
+                    "Stuffed Chili Pepper",
+                    "Enchanted Brown Mushroom Block",
+                    "Enchanted Rabbit Hide",
+                    "Plasma");
+
+    private static boolean isHabCraftMaterial(String itemName) {
+        return HAB_MATERIALS.contains(itemName);
     }
 
     private static void addTxn(
             long epochMs, String kind, String itemName, int quantity, double pricePerUnit, boolean instant) {
         if (quantity <= 0) return;
+        if (isHabCraftMaterial(itemName)) {
+            return;
+        }
         Transaction tx =
                 new Transaction(epochMs, kind, itemName, quantity, round1(pricePerUnit), instant);
         TRANSACTIONS.add(tx);

@@ -190,6 +190,10 @@ public final class FlipAlertBridge {
             throw new AuthFailureException();
         }
         if (code != 200) {
+            if (code == 502 && base.contains("vercel.app")) {
+                throw new IOException(
+                        "HTTP 502 (Vercel cannot reach EC2) — use /mansifbridge direct http://YOUR_IP:3001");
+            }
             throw new IOException("HTTP " + code + " from " + base);
         }
         byte[] body = conn.getInputStream().readAllBytes();

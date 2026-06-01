@@ -32,6 +32,15 @@ public final class BazaarPortfolioSync {
         scheduleUpload();
     }
 
+    /** Push local history to MansifTracker once (server dedupes). */
+    public static void enqueueAll(List<BazaarLog.Transaction> txs) {
+        if (txs == null || txs.isEmpty()) {
+            return;
+        }
+        PENDING.addAll(txs);
+        scheduleUpload();
+    }
+
     private static void scheduleUpload() {
         if (!UPLOAD_IN_FLIGHT.compareAndSet(false, true)) {
             return;

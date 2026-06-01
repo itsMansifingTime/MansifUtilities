@@ -60,6 +60,20 @@ public final class BazaarLog {
 
     public static void registerHooks() {
         loadFromDisk();
+        Thread backfill =
+                new Thread(
+                        () -> {
+                            FlipBridgeConfig cfg = FlipBridgeConfig.loadAndSync();
+                            if (cfg.isUsable()) {
+                                synchronized (TRANSACTIONS) {
+                                    BazaarPortfolioSync.enqueueAll(
+                                            new ArrayList<>(TRANSACTIONS));
+                                }
+                            }
+                        },
+                        "mansifutilities-bazaar-backfill");
+        backfill.setDaemon(true);
+        backfill.start();
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (overlay) return;
             String s = message.getString();

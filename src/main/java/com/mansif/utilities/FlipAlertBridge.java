@@ -10,6 +10,9 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -43,7 +46,6 @@ public final class FlipAlertBridge {
     private static boolean catchUpPoll = true;
     private static long lastPollErrorChatAtMs = 0;
 
-    private static boolean viewKeyPrev = false;
     private static KeyMapping viewFlipKey;
 
     public static void reloadConfig() {
@@ -116,26 +118,29 @@ public final class FlipAlertBridge {
             }
         }
 
-        boolean isDown = viewFlipKey.isDown();
-        if (client.screen != null && client.getWindow() != null) {
-            InputConstants.Key boundKey = KeyBindingHelper.getBoundKeyOf(viewFlipKey);
-            if (boundKey.getType() == InputConstants.Type.KEYSYM) {
-                isDown =
-                        isDown
-                                || InputConstants.isKeyDown(
-                                        client.getWindow(), boundKey.getValue());
-            } else if (boundKey.getType() == InputConstants.Type.MOUSE) {
-                long handle = GLFW.glfwGetCurrentContext();
-                isDown =
-                        isDown
-                                || GLFW.glfwGetMouseButton(handle, boundKey.getValue())
-                                        == GLFW.GLFW_PRESS;
-            }
+        if (client.player == null) {
+            return;
         }
-        if (isDown && !viewKeyPrev) {
+        if (isFlipKeyBlocked(client.screen)) {
+            drainFlipKeyClicks();
+            return;
+        }
+        if (viewFlipKey.consumeClick()) {
             runViewAuction(client);
         }
-        viewKeyPrev = isDown;
+    }
+
+    /** Chat and container GUIs (player inv, chests, AH, etc.) — never steal keys there. */
+    private static boolean isFlipKeyBlocked(Screen screen) {
+        return screen instanceof ChatScreen
+                || screen instanceof AbstractContainerScreen<?>;
+    }
+
+    /** Drop presses made while typing or in an inventory so they do not fire on close. */
+    private static void drainFlipKeyClicks() {
+        while (viewFlipKey.consumeClick()) {
+            // discard
+        }
     }
 
     private static final int CONNECT_TIMEOUT_MS = 6000;

@@ -21,9 +21,14 @@ public class MansifUtilities implements ClientModInitializer {
         InventoryHighlighter.registerHooks();
         BazaarLog.registerHooks();
         FlipBridgeCommands.register();
+        MansifCommands.register();
         RecipeCommands.register();
         FlipAlertBridge.registerHooks();
-//        ItemHoverDisplay.registerHooks();
+
+        AnankeGuiConfig.load();
+        AnankeGodrollLookup.load();
+        AnankeGodrollTooltip.register();
+        AnankeFeatherDisplay.registerHooks();
     }
 }
 

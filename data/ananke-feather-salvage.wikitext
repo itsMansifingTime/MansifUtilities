@@ -1,0 +1,304 @@
+===Salvaging Godrolls===
+'''Ananke Feathers''' can also be obtained by salvaging legacy greyed out attributes from certain items with specific attribute combinations at {{NPCSprite|Salvage Old Attributes}} or in {{Code|/attributemenu}}.
+
+{| class="wikitable centertext sortable mw-collapsible mw-collapsed"
+|-
+! Item
+! colspan="2" | Attribute Combination
+! Feathers Rewarded
+|-
+| data-sort-value="Aurora 2" | {{ID|Aurora Chestplate}}
+| {{Attr|Mana Pool}}
+| {{Attr|Mana Regeneration}}
+| 6
+|-
+| data-sort-value="Aurora 3" | {{ID|Aurora Leggings}}
+| {{Attr|Mana Pool}}
+| {{Attr|Mana Regeneration}}
+| 6
+|-
+| data-sort-value="Aurora 4" | {{ID|Aurora Boots}}
+| {{Attr|Mana Pool}}
+| {{Attr|Mana Regeneration}}
+| 6
+|-
+| data-sort-value="Crimson 1" | {{ID|Crimson Helmet}}
+| {{Attr|Magic Find}}
+| {{Attr|Veteran}}
+| 7
+|-
+| data-sort-value="Crimson 2" rowspan="3" | {{ID|Crimson Chestplate}}
+| {{Attr|Magic Find}}
+| {{Attr|Veteran}}
+| 9
+|-
+| {{Attr|Magic Find}}
+| {{Attr|Vitality}}
+| 1
+|-
+| {{Attr|Vitality}}
+| {{Attr|Veteran}}
+| 2
+|-
+| data-sort-value="Crimson 3" rowspan="3" | {{ID|Crimson Leggings}}
+| {{Attr|Magic Find}}
+| {{Attr|Veteran}}
+| 9
+|-
+| {{Attr|Magic Find}}
+| {{Attr|Vitality}}
+| 2
+|-
+| {{Attr|Vitality}}
+| {{Attr|Veteran}}
+| 2
+|-
+| data-sort-value="Crimson 4" rowspan="3" | {{ID|Crimson Boots}}
+| {{Attr|Magic Find}}
+| {{Attr|Veteran}}
+| 9
+|-
+| {{Attr|Magic Find}}
+| {{Attr|Vitality}}
+| 1
+|-
+| {{Attr|Vitality}}
+| {{Attr|Veteran}}
+| 2
+|-
+| rowspan="5" | {{ID|Gauntlet of Contagion}}
+| {{Attr|Dominance}}
+| {{Attr|Mana Pool}}
+| 5
+|-
+| {{Attr|Dominance}}
+| {{Attr|Speed}}
+| 8
+|-
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 1
+|-
+| {{Attr|Mana Pool}}
+| {{Attr|Mana Regeneration}}
+| 2
+|-
+| {{Attr|Veteran}}
+| {{Attr|Vitality}}
+| 1
+|-
+| {{ID|Ghast Cloak}}
+| {{Attr|Veteran}}
+| {{Attr|Vitality}}
+| 2
+|-
+| {{ID|Implosion Belt}}
+| {{Attr|Mana Pool}}
+| {{Attr|Mana Regeneration}}
+| 1
+|-
+| {{ID|Lava Shell Necklace}}
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 9
+|-
+| data-sort-value="Magma Lord 1" rowspan="3" | {{ID|Magma Lord Helmet}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 9
+|-
+| {{Attr|Blazing Fortune}}
+| {{Attr|Magic Find}}
+| 20
+|-
+| {{Attr|Fishing Experience}}
+| {{Attr|Magic Find}}
+| 10
+|-
+| data-sort-value="Magma Lord 2" rowspan="3" | {{ID|Magma Lord Chestplate}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 9
+|-
+| {{Attr|Blazing Fortune}}
+| {{Attr|Magic Find}}
+| 20
+|-
+| {{Attr|Fishing Experience}}
+| {{Attr|Magic Find}}
+| 8
+|-
+| data-sort-value="Magma Lord 3" rowspan="3" | {{ID|Magma Lord Leggings}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 9
+|-
+| {{Attr|Blazing Fortune}}
+| {{Attr|Magic Find}}
+| 20
+|-
+| {{Attr|Fishing Experience}}
+| {{Attr|Magic Find}}
+| 10
+|-
+| data-sort-value="Magma Lord 4" rowspan="3" | {{ID|Magma Lord Boots}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 9
+|-
+| {{Attr|Blazing Fortune}}
+| {{Attr|Magic Find}}
+| 20
+|-
+| {{Attr|Fishing Experience}}
+| {{Attr|Magic Find}}
+| 5
+|-
+| data-sort-value="Magma Lord 5" rowspan="3" | {{ID|Magma Lord Necklace}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 9
+|-
+| {{Attr|Blazing Fortune}}
+| {{Attr|Magic Find}}
+| 20
+|-
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 3
+|-
+| data-sort-value="Magma Lord 6" rowspan="3" | {{ID|Magma Lord Gauntlet}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 9
+|-
+| {{Attr|Blazing Fortune}}
+| {{Attr|Magic Find}}
+| 20
+|-
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 3
+|-
+| data-sort-value="Molten 1" rowspan="2" | {{ID|Molten Necklace}}
+| {{Attr|Dominance}}
+| {{Attr|Mana Pool}}
+| 1
+|-
+| {{Attr|Mana Pool}}
+| {{Attr|Mana Regeneration}}
+| 1
+|-
+| data-sort-value="Molten 2" rowspan="3" | {{ID|Molten Cloak}}
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 2
+|-
+| {{Attr|Magic Find}}
+| {{Attr|Veteran}}
+| 2
+|-
+| {{Attr|Mana Pool}}
+| {{Attr|Mana Regeneration}}
+| 1
+|-
+| data-sort-value="Molten 3" rowspan="2" | {{ID|Molten Belt}}
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 2
+|-
+| {{Attr|Magic Find}}
+| {{Attr|Veteran}}
+| 2
+|-
+| data-sort-value="Molten 4" rowspan="2" | {{ID|Molten Bracelet}}
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 2
+|-
+| {{Attr|Magic Find}}
+| {{Attr|Veteran}}
+| 2
+|-
+| {{ID|Scourge Cloak}}
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 5
+|-
+| data-sort-value="Terror 2" | {{ID|Terror Chestplate}}
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 3
+|-
+| data-sort-value="Terror 3" | {{ID|Terror Leggings}}
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 3
+|-
+| data-sort-value="Terror 4" | {{ID|Terror Boots}}
+| {{Attr|Lifeline}}
+| {{Attr|Mana Pool}}
+| 3
+|-
+| data-sort-value="Thunder 1" rowspan="3" | {{ID|Thunder Helmet}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 1
+|-
+| {{Attr|Blazing Fortune}}
+| {{Attr|Magic Find}}
+| 1
+|-
+| {{Attr|Fishing Experience}}
+| {{Attr|Magic Find}}
+| 1
+|-
+| data-sort-value="Thunder 2" rowspan="3" | {{ID|Thunder Chestplate}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 1
+|-
+| {{Attr|Blazing Fortune}}
+| {{Attr|Magic Find}}
+| 1
+|-
+| {{Attr|Fishing Experience}}
+| {{Attr|Magic Find}}
+| 1
+|-
+| data-sort-value="Thunder 3" rowspan="3" | {{ID|Thunder Leggings}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 1
+|-
+| {{Attr|Blazing Fortune}}
+| {{Attr|Magic Find}}
+| 1
+|-
+| {{Attr|Fishing Experience}}
+| {{Attr|Magic Find}}
+| 1
+|-
+| data-sort-value="Thunder 4" rowspan="3" | {{ID|Thunder Boots}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 1
+|-
+| {{Attr|Blazing Fortune}}
+| {{Attr|Magic Find}}
+| 1
+|-
+| {{Attr|Fishing Experience}}
+| {{Attr|Magic Find}}
+| 1
+|-
+| data-sort-value="Thunder 5" | {{ID|Thunderbolt Necklace}}
+| {{Attr|Blazing Fortune}}
+| {{Attr|Fishing Experience}}
+| 1
+|-
+| {{ID|Vanquished Ghast Cloak}}
+| {{Attr|Veteran}}
+| {{Attr|Vitality}}
+| 2
+|}

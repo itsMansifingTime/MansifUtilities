@@ -1,0 +1,468 @@
+{
+  "wiki": "https://wiki.hypixel.net/Ananke_Feather",
+  "wikiSection": "Salvaging Godrolls",
+  "rows": [
+    {
+      "itemId": "AURORA_CHESTPLATE",
+      "itemName": "Aurora Chestplate",
+      "attr1": "Mana Pool",
+      "attr2": "Mana Regeneration",
+      "feathers": 6
+    },
+    {
+      "itemId": "AURORA_LEGGINGS",
+      "itemName": "Aurora Leggings",
+      "attr1": "Mana Pool",
+      "attr2": "Mana Regeneration",
+      "feathers": 6
+    },
+    {
+      "itemId": "AURORA_BOOTS",
+      "itemName": "Aurora Boots",
+      "attr1": "Mana Pool",
+      "attr2": "Mana Regeneration",
+      "feathers": 6
+    },
+    {
+      "itemId": "CRIMSON_HELMET",
+      "itemName": "Crimson Helmet",
+      "attr1": "Magic Find",
+      "attr2": "Veteran",
+      "feathers": 7
+    },
+    {
+      "itemId": "CRIMSON_CHESTPLATE",
+      "itemName": "Crimson Chestplate",
+      "attr1": "Magic Find",
+      "attr2": "Veteran",
+      "feathers": 9
+    },
+    {
+      "itemId": "CRIMSON_CHESTPLATE",
+      "itemName": "Crimson Chestplate",
+      "attr1": "Magic Find",
+      "attr2": "Vitality",
+      "feathers": 1
+    },
+    {
+      "itemId": "CRIMSON_CHESTPLATE",
+      "itemName": "Crimson Chestplate",
+      "attr1": "Vitality",
+      "attr2": "Veteran",
+      "feathers": 2
+    },
+    {
+      "itemId": "CRIMSON_LEGGINGS",
+      "itemName": "Crimson Leggings",
+      "attr1": "Magic Find",
+      "attr2": "Veteran",
+      "feathers": 9
+    },
+    {
+      "itemId": "CRIMSON_LEGGINGS",
+      "itemName": "Crimson Leggings",
+      "attr1": "Magic Find",
+      "attr2": "Vitality",
+      "feathers": 2
+    },
+    {
+      "itemId": "CRIMSON_LEGGINGS",
+      "itemName": "Crimson Leggings",
+      "attr1": "Vitality",
+      "attr2": "Veteran",
+      "feathers": 2
+    },
+    {
+      "itemId": "CRIMSON_BOOTS",
+      "itemName": "Crimson Boots",
+      "attr1": "Magic Find",
+      "attr2": "Veteran",
+      "feathers": 9
+    },
+    {
+      "itemId": "CRIMSON_BOOTS",
+      "itemName": "Crimson Boots",
+      "attr1": "Magic Find",
+      "attr2": "Vitality",
+      "feathers": 1
+    },
+    {
+      "itemId": "CRIMSON_BOOTS",
+      "itemName": "Crimson Boots",
+      "attr1": "Vitality",
+      "attr2": "Veteran",
+      "feathers": 2
+    },
+    {
+      "itemId": "GAUNTLET_OF_CONTAGION",
+      "itemName": "Gauntlet of Contagion",
+      "attr1": "Dominance",
+      "attr2": "Mana Pool",
+      "feathers": 5
+    },
+    {
+      "itemId": "GAUNTLET_OF_CONTAGION",
+      "itemName": "Gauntlet of Contagion",
+      "attr1": "Dominance",
+      "attr2": "Speed",
+      "feathers": 8
+    },
+    {
+      "itemId": "GAUNTLET_OF_CONTAGION",
+      "itemName": "Gauntlet of Contagion",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 1
+    },
+    {
+      "itemId": "GAUNTLET_OF_CONTAGION",
+      "itemName": "Gauntlet of Contagion",
+      "attr1": "Mana Pool",
+      "attr2": "Mana Regeneration",
+      "feathers": 2
+    },
+    {
+      "itemId": "GAUNTLET_OF_CONTAGION",
+      "itemName": "Gauntlet of Contagion",
+      "attr1": "Veteran",
+      "attr2": "Vitality",
+      "feathers": 1
+    },
+    {
+      "itemId": "GHAST_CLOAK",
+      "itemName": "Ghast Cloak",
+      "attr1": "Veteran",
+      "attr2": "Vitality",
+      "feathers": 2
+    },
+    {
+      "itemId": "IMPLOSION_BELT",
+      "itemName": "Implosion Belt",
+      "attr1": "Mana Pool",
+      "attr2": "Mana Regeneration",
+      "feathers": 1
+    },
+    {
+      "itemId": "LAVA_SHELL_NECKLACE",
+      "itemName": "Lava Shell Necklace",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 9
+    },
+    {
+      "itemId": "MAGMA_LORD_HELMET",
+      "itemName": "Magma Lord Helmet",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 9
+    },
+    {
+      "itemId": "MAGMA_LORD_HELMET",
+      "itemName": "Magma Lord Helmet",
+      "attr1": "Blazing Fortune",
+      "attr2": "Magic Find",
+      "feathers": 20
+    },
+    {
+      "itemId": "MAGMA_LORD_HELMET",
+      "itemName": "Magma Lord Helmet",
+      "attr1": "Fishing Experience",
+      "attr2": "Magic Find",
+      "feathers": 10
+    },
+    {
+      "itemId": "MAGMA_LORD_CHESTPLATE",
+      "itemName": "Magma Lord Chestplate",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 9
+    },
+    {
+      "itemId": "MAGMA_LORD_CHESTPLATE",
+      "itemName": "Magma Lord Chestplate",
+      "attr1": "Blazing Fortune",
+      "attr2": "Magic Find",
+      "feathers": 20
+    },
+    {
+      "itemId": "MAGMA_LORD_CHESTPLATE",
+      "itemName": "Magma Lord Chestplate",
+      "attr1": "Fishing Experience",
+      "attr2": "Magic Find",
+      "feathers": 8
+    },
+    {
+      "itemId": "MAGMA_LORD_LEGGINGS",
+      "itemName": "Magma Lord Leggings",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 9
+    },
+    {
+      "itemId": "MAGMA_LORD_LEGGINGS",
+      "itemName": "Magma Lord Leggings",
+      "attr1": "Blazing Fortune",
+      "attr2": "Magic Find",
+      "feathers": 20
+    },
+    {
+      "itemId": "MAGMA_LORD_LEGGINGS",
+      "itemName": "Magma Lord Leggings",
+      "attr1": "Fishing Experience",
+      "attr2": "Magic Find",
+      "feathers": 10
+    },
+    {
+      "itemId": "MAGMA_LORD_BOOTS",
+      "itemName": "Magma Lord Boots",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 9
+    },
+    {
+      "itemId": "MAGMA_LORD_BOOTS",
+      "itemName": "Magma Lord Boots",
+      "attr1": "Blazing Fortune",
+      "attr2": "Magic Find",
+      "feathers": 20
+    },
+    {
+      "itemId": "MAGMA_LORD_BOOTS",
+      "itemName": "Magma Lord Boots",
+      "attr1": "Fishing Experience",
+      "attr2": "Magic Find",
+      "feathers": 5
+    },
+    {
+      "itemId": "MAGMA_LORD_NECKLACE",
+      "itemName": "Magma Lord Necklace",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 9
+    },
+    {
+      "itemId": "MAGMA_LORD_NECKLACE",
+      "itemName": "Magma Lord Necklace",
+      "attr1": "Blazing Fortune",
+      "attr2": "Magic Find",
+      "feathers": 20
+    },
+    {
+      "itemId": "MAGMA_LORD_NECKLACE",
+      "itemName": "Magma Lord Necklace",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 3
+    },
+    {
+      "itemId": "MAGMA_LORD_GAUNTLET",
+      "itemName": "Magma Lord Gauntlet",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 9
+    },
+    {
+      "itemId": "MAGMA_LORD_GAUNTLET",
+      "itemName": "Magma Lord Gauntlet",
+      "attr1": "Blazing Fortune",
+      "attr2": "Magic Find",
+      "feathers": 20
+    },
+    {
+      "itemId": "MAGMA_LORD_GAUNTLET",
+      "itemName": "Magma Lord Gauntlet",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 3
+    },
+    {
+      "itemId": "MOLTEN_NECKLACE",
+      "itemName": "Molten Necklace",
+      "attr1": "Dominance",
+      "attr2": "Mana Pool",
+      "feathers": 1
+    },
+    {
+      "itemId": "MOLTEN_NECKLACE",
+      "itemName": "Molten Necklace",
+      "attr1": "Mana Pool",
+      "attr2": "Mana Regeneration",
+      "feathers": 1
+    },
+    {
+      "itemId": "MOLTEN_CLOAK",
+      "itemName": "Molten Cloak",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 2
+    },
+    {
+      "itemId": "MOLTEN_CLOAK",
+      "itemName": "Molten Cloak",
+      "attr1": "Magic Find",
+      "attr2": "Veteran",
+      "feathers": 2
+    },
+    {
+      "itemId": "MOLTEN_CLOAK",
+      "itemName": "Molten Cloak",
+      "attr1": "Mana Pool",
+      "attr2": "Mana Regeneration",
+      "feathers": 1
+    },
+    {
+      "itemId": "MOLTEN_BELT",
+      "itemName": "Molten Belt",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 2
+    },
+    {
+      "itemId": "MOLTEN_BELT",
+      "itemName": "Molten Belt",
+      "attr1": "Magic Find",
+      "attr2": "Veteran",
+      "feathers": 2
+    },
+    {
+      "itemId": "MOLTEN_BRACELET",
+      "itemName": "Molten Bracelet",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 2
+    },
+    {
+      "itemId": "MOLTEN_BRACELET",
+      "itemName": "Molten Bracelet",
+      "attr1": "Magic Find",
+      "attr2": "Veteran",
+      "feathers": 2
+    },
+    {
+      "itemId": "SCOURGE_CLOAK",
+      "itemName": "Scourge Cloak",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 5
+    },
+    {
+      "itemId": "TERROR_CHESTPLATE",
+      "itemName": "Terror Chestplate",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 3
+    },
+    {
+      "itemId": "TERROR_LEGGINGS",
+      "itemName": "Terror Leggings",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 3
+    },
+    {
+      "itemId": "TERROR_BOOTS",
+      "itemName": "Terror Boots",
+      "attr1": "Lifeline",
+      "attr2": "Mana Pool",
+      "feathers": 3
+    },
+    {
+      "itemId": "THUNDER_HELMET",
+      "itemName": "Thunder Helmet",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_HELMET",
+      "itemName": "Thunder Helmet",
+      "attr1": "Blazing Fortune",
+      "attr2": "Magic Find",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_HELMET",
+      "itemName": "Thunder Helmet",
+      "attr1": "Fishing Experience",
+      "attr2": "Magic Find",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_CHESTPLATE",
+      "itemName": "Thunder Chestplate",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_CHESTPLATE",
+      "itemName": "Thunder Chestplate",
+      "attr1": "Blazing Fortune",
+      "attr2": "Magic Find",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_CHESTPLATE",
+      "itemName": "Thunder Chestplate",
+      "attr1": "Fishing Experience",
+      "attr2": "Magic Find",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_LEGGINGS",
+      "itemName": "Thunder Leggings",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_LEGGINGS",
+      "itemName": "Thunder Leggings",
+      "attr1": "Blazing Fortune",
+      "attr2": "Magic Find",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_LEGGINGS",
+      "itemName": "Thunder Leggings",
+      "attr1": "Fishing Experience",
+      "attr2": "Magic Find",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_BOOTS",
+      "itemName": "Thunder Boots",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_BOOTS",
+      "itemName": "Thunder Boots",
+      "attr1": "Blazing Fortune",
+      "attr2": "Magic Find",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDER_BOOTS",
+      "itemName": "Thunder Boots",
+      "attr1": "Fishing Experience",
+      "attr2": "Magic Find",
+      "feathers": 1
+    },
+    {
+      "itemId": "THUNDERBOLT_NECKLACE",
+      "itemName": "Thunderbolt Necklace",
+      "attr1": "Blazing Fortune",
+      "attr2": "Fishing Experience",
+      "feathers": 1
+    },
+    {
+      "itemId": "VANQUISHED_GHAST_CLOAK",
+      "itemName": "Vanquished Ghast Cloak",
+      "attr1": "Veteran",
+      "attr2": "Vitality",
+      "feathers": 2
+    }
+  ]
+}

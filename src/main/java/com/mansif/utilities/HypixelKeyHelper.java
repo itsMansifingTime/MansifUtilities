@@ -31,24 +31,46 @@ public final class HypixelKeyHelper {
         }
         long expiresAtMs =
                 System.currentTimeMillis() + (long) validDays * 24L * 60L * 60L * 1000L;
+        String keyTrimmed = apiKey.trim();
         FlipBridgeConfig.update(
                 cfg -> {
-                    cfg.hypixelApiKey = apiKey.trim();
+                    cfg.hypixelApiKey = keyTrimmed;
                     cfg.hypixelApiKeyExpiresAtMs = expiresAtMs;
                 });
 
-        FlipBridgeConfig cfg = FlipBridgeConfig.loadAndSync();
-        String pushResult = pushKeyToServer(cfg, apiKey.trim(), expiresAtMs, validDays);
+        Minecraft client = source.getClient();
         source.sendFeedback(
                 Component.literal(
-                                "[MansifUtilities] Saved Hypixel API key (expires in "
+                                "[MansifUtilities] Saved Hypixel API key locally (expires in "
                                         + validDays
                                         + " day"
                                         + (validDays == 1 ? "" : "s")
-                                        + "). "
-                                        + pushResult)
-                        .withStyle(ChatFormatting.GREEN));
+                                        + "). Pushing to server in background…")
+                        .withStyle(ChatFormatting.YELLOW));
         FlipAlertBridge.reloadConfig();
+
+        FlipBridgeConfig cfg = FlipBridgeConfig.loadAndSync();
+        Thread pushThread =
+                new Thread(
+                        () -> {
+                            String pushResult =
+                                    pushKeyToServer(cfg, keyTrimmed, expiresAtMs, validDays);
+                            client.execute(
+                                    () -> {
+                                        source.sendFeedback(
+                                                Component.literal(
+                                                                "[MansifUtilities] "
+                                                                        + pushResult)
+                                                        .withStyle(
+                                                                pushResult.startsWith("Server updated")
+                                                                        ? ChatFormatting.GREEN
+                                                                        : ChatFormatting.GOLD));
+                                        FlipAlertBridge.reloadConfig();
+                                    });
+                        },
+                        "mansifutilities-hypixel-key-push");
+        pushThread.setDaemon(true);
+        pushThread.start();
     }
 
     public static void clearKey(FabricClientCommandSource source) {
@@ -130,7 +152,7 @@ public final class HypixelKeyHelper {
         if (!cfg.isUsable()) {
             return;
         }
-        for (String base : cfg.pollApiBasesInOrder()) {
+        for (String base : FlipBridgeConfig.apiBasesForHypixelKeyPush(cfg)) {
             if (trySyncExpiryFromBase(cfg, base)) {
                 return;
             }
@@ -143,8 +165,8 @@ public final class HypixelKeyHelper {
             HttpURLConnection conn =
                     (HttpURLConnection) URI.create(url).toURL().openConnection();
             conn.setRequestMethod("GET");
-            conn.setConnectTimeout(6000);
-            conn.setReadTimeout(6000);
+            conn.setConnectTimeout(4000);
+            conn.setReadTimeout(4000);
             conn.setRequestProperty("Authorization", "Bearer " + cfg.secret.trim());
             conn.setRequestProperty("Accept", "application/json");
             if (conn.getResponseCode() != 200) {
@@ -187,15 +209,15 @@ public final class HypixelKeyHelper {
                         + ",\"validDays\":"
                         + validDays
                         + "}";
-        for (String base : cfg.pollApiBasesInOrder()) {
+        for (String base : FlipBridgeConfig.apiBasesForHypixelKeyPush(cfg)) {
             try {
                 String url = base.trim().replaceAll("/+$", "") + "/api/bin-deal-hypixel-key";
                 HttpURLConnection conn =
                         (HttpURLConnection) URI.create(url).toURL().openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true);
-                conn.setConnectTimeout(8000);
-                conn.setReadTimeout(8000);
+                conn.setConnectTimeout(4000);
+                conn.setReadTimeout(4000);
                 conn.setRequestProperty("Authorization", "Bearer " + cfg.secret.trim());
                 conn.setRequestProperty("Content-Type", "application/json");
                 conn.setRequestProperty("Accept", "application/json");

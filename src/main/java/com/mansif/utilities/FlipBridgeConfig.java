@@ -365,6 +365,20 @@ public final class FlipBridgeConfig {
         return candidateApiBasesForConfigPull(cfg);
     }
 
+    /** Hypixel key POST should hit EC2 file first, not Vercel ephemeral disk. */
+    public static List<String> apiBasesForHypixelKeyPush(FlipBridgeConfig cfg) {
+        List<String> out = new ArrayList<>();
+        addCandidate(out, cfg.directApiBase);
+        addCandidate(out, "https://api.mansif.dev");
+        addCandidate(out, cfg.apiBase);
+        FlipBridgeConfig defaults = loadBundledDefaults();
+        addCandidate(out, defaults.directApiBase);
+        addCandidate(out, defaults.apiBase);
+        addCandidate(out, "https://mansiftracker.vercel.app");
+        addCandidate(out, "http://127.0.0.1:3001");
+        return out;
+    }
+
     /**
      * Config pull: try HTTPS / public apiBase first so a dead direct EC2 IP does not block for
      * multiple connect timeouts (feed poll still prefers direct — see pollApiBasesInOrder).

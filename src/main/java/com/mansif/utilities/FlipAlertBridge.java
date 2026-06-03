@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -46,8 +47,25 @@ public final class FlipAlertBridge {
     private static boolean catchUpPoll = true;
     private static boolean manualPollFeedbackPending = false;
     private static long lastPollErrorChatAtMs = 0;
+    private static String lastPollErrorSignature = "";
+    private static volatile boolean startupLaunched = false;
+    private static volatile String preferredFeedBase;
 
     private static KeyMapping viewFlipKey;
+
+    public static String preferredFeedBase() {
+        return preferredFeedBase;
+    }
+
+    public static String lastPollErrorForStatus() {
+        return lastPollErrorSignature.isBlank() ? "(none)" : lastPollErrorSignature;
+    }
+
+    /** Re-run host probes and refresh preferred feed base (also runs on first in-world tick). */
+    public static void requestStartup(Minecraft client) {
+        startupLaunched = false;
+        maybeRunStartup(client);
+    }
 
     public static void reloadConfig() {
         config = FlipBridgeConfig.loadAndSync();
@@ -106,6 +124,10 @@ public final class FlipAlertBridge {
     }
 
     private static void onClientTick(Minecraft client) {
+        if (client.player != null) {
+            maybeRunStartup(client);
+        }
+
         HypixelKeyHelper.tickExpiryReminder(client, config);
 
         if (config.isUsable()) {
@@ -145,19 +167,70 @@ public final class FlipAlertBridge {
         }
     }
 
-    private static final int CONNECT_TIMEOUT_MS = 6000;
-    private static final int READ_TIMEOUT_MS = 12000;
+    private static final int CONNECT_TIMEOUT_MS = 8000;
+    private static final int READ_TIMEOUT_MS = 18000;
+
+    private static void maybeRunStartup(Minecraft client) {
+        if (startupLaunched) {
+            return;
+        }
+        startupLaunched = true;
+        Thread startupThread =
+                new Thread(
+                        () -> {
+                            FlipBridgeConfig cfg = FlipBridgeConfig.loadAndSync();
+                            FlipBridgeHealth.StartupResult result =
+                                    FlipBridgeHealth.runStartup(cfg);
+                            config = cfg;
+                            if (result.chosenFeedBase() != null) {
+                                preferredFeedBase = result.chosenFeedBase();
+                            }
+                            client.execute(
+                                    () -> {
+                                        if (client.player == null) {
+                                            return;
+                                        }
+                                        for (String line : result.chatLines()) {
+                                            ChatFormatting color =
+                                                    result.ready()
+                                                            ? ChatFormatting.GREEN
+                                                            : line.contains("NOT ready")
+                                                                    ? ChatFormatting.RED
+                                                                    : ChatFormatting.YELLOW;
+                                            client.player.displayClientMessage(
+                                                    mansifPrefix()
+                                                            .append(
+                                                                    Component.literal(line)
+                                                                            .withStyle(color)),
+                                                    false);
+                                        }
+                                    });
+                        },
+                        "mansifutilities-flip-startup");
+        startupThread.setDaemon(true);
+        startupThread.start();
+    }
+
+    private static List<String> pollBasesOrdered() {
+        List<String> bases = new ArrayList<>(config.pollApiBasesForFeed());
+        if (preferredFeedBase != null && !preferredFeedBase.isBlank()) {
+            bases.remove(preferredFeedBase);
+            bases.add(0, preferredFeedBase);
+        }
+        return bases;
+    }
 
     private static void pollFeed(Minecraft client) {
         try {
             long sinceQuery = catchUpPoll ? 0L : lastSeenMs;
             catchUpPoll = false;
-            List<String> bases = config.pollApiBasesForFeed();
+            List<String> bases = pollBasesOrdered();
             boolean manualEarly = manualPollFeedbackPending;
             if (bases.isEmpty()) {
                 notifyPollFailure(
                         client,
-                        "no API URL — /mansifbridge sync or /mansifbridge direct <url>",
+                        "",
+                        "No API URL configured — run /mansifbridge startup or /mansifbridge direct https://api.mansif.dev",
                         manualEarly);
                 return;
             }
@@ -172,6 +245,8 @@ public final class FlipAlertBridge {
                 try {
                     PollResult result = pollFeedFromBase(client, base, sinceQuery);
                     if (result.feedCount > 0 || result.newFlips > 0) {
+                        lastPollErrorSignature = "";
+                        preferredFeedBase = base;
                         if (manual) {
                             notifyPollSuccess(client, base, sinceQuery, result, null);
                         }
@@ -184,7 +259,11 @@ public final class FlipAlertBridge {
                     MansifUtilities.LOGGER.debug(
                             "Flip feed empty on {} ({} hosts tried so far)", base, emptyHostsTried);
                 } catch (AuthFailureException e) {
-                    notifyPollFailure(client, "feed auth failed (wrong secret?) — /mansifbridge secret …", manual);
+                    notifyPollFailure(
+                            client,
+                            base,
+                            FlipBridgeHealth.formatFailureForChat(base, "HTTP 401 auth failed"),
+                            manual);
                     return;
                 } catch (Exception e) {
                     lastError = e;
@@ -198,6 +277,8 @@ public final class FlipAlertBridge {
             }
 
             if (lastEmptyResult != null && lastEmptyBase != null) {
+                lastPollErrorSignature = "";
+                preferredFeedBase = lastEmptyBase;
                 String triedNote = buildAttemptSummary(attemptLog, emptyHostsTried);
                 if (manual) {
                     notifyPollSuccess(client, lastEmptyBase, sinceQuery, lastEmptyResult, triedNote);
@@ -205,11 +286,16 @@ public final class FlipAlertBridge {
                 return;
             }
 
-            String detail =
+            String failedBase = bases.isEmpty() ? "" : bases.get(0);
+            String rawDetail =
                     lastError != null && lastError.getMessage() != null
                             ? lastError.getMessage()
                             : "connection failed";
-            notifyPollFailure(client, formatPollFailureDetail(bases, detail), manual);
+            notifyPollFailure(
+                    client,
+                    failedBase,
+                    FlipBridgeHealth.formatFailureForChat(failedBase, rawDetail),
+                    manual);
         } finally {
             pollInFlight.set(false);
         }
@@ -238,7 +324,7 @@ public final class FlipAlertBridge {
                 throw new IOException(
                         "HTTP 502 (Vercel cannot reach EC2)"
                                 + (apiMsg != null ? " — " + apiMsg : "")
-                                + " — use /mansifbridge direct http://YOUR_IP:3001");
+                                + " — use /mansifbridge direct https://api.mansif.dev");
             }
             throw new IOException(
                     "HTTP " + code + " from " + base + (apiMsg != null ? " — " + apiMsg : ""));
@@ -428,26 +514,27 @@ public final class FlipAlertBridge {
         }
     }
 
-    private static String formatPollFailureDetail(List<String> bases, String detail) {
-        String primary = bases.isEmpty() ? "(none)" : bases.get(0);
-        String hint =
-                primary.contains("vercel.app")
-                        ? " Vercel timed out reaching EC2 — use /mansifbridge direct http://YOUR_IP:3001 or /mansifbridge sync after EC2 config update."
-                        : " Check EC2 security group (TCP 3001) and pm2 on :3001.";
-        return "cannot reach flip API (" + primary + ") — " + detail + "." + hint;
-    }
-
     private static final class AuthFailureException extends Exception {}
 
-    private static void notifyPollFailure(Minecraft client, String detail, boolean manual) {
+    private static void notifyPollFailure(
+            Minecraft client, String failedBase, String detail, boolean manual) {
         long now = System.currentTimeMillis();
-        if (!manual && now - lastPollErrorChatAtMs < 30_000L) {
-            return;
+        if (!manual) {
+            if (detail.equals(lastPollErrorSignature)) {
+                return;
+            }
+            if (now - lastPollErrorChatAtMs < 120_000L && !lastPollErrorSignature.isBlank()) {
+                return;
+            }
+            lastPollErrorSignature = detail;
+        } else {
+            lastPollErrorSignature = detail;
         }
         if (manual) {
             manualPollFeedbackPending = false;
         }
         lastPollErrorChatAtMs = now;
+        MansifUtilities.LOGGER.warn("Flip poll failed ({}): {}", failedBase, detail);
         client.execute(
                 () -> {
                     if (client.player == null) {

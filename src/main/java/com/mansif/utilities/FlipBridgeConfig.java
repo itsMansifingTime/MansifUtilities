@@ -244,7 +244,8 @@ public final class FlipBridgeConfig {
     private static boolean normalize(FlipBridgeConfig cfg) {
         boolean changed = false;
         if (cfg.apiBase != null) {
-            String trimmed = cfg.apiBase.trim().replaceAll("/+$", "");
+            String trimmed =
+                    FlipBridgeHealth.sanitizeApiBaseUrl(cfg.apiBase.trim().replaceAll("/+$", ""));
             if (!trimmed.equals(cfg.apiBase)) {
                 cfg.apiBase = trimmed;
                 changed = true;
@@ -266,7 +267,9 @@ public final class FlipBridgeConfig {
             }
         }
         if (cfg.directApiBase != null) {
-            String trimmed = cfg.directApiBase.trim().replaceAll("/+$", "");
+            String trimmed =
+                    FlipBridgeHealth.sanitizeApiBaseUrl(
+                            cfg.directApiBase.trim().replaceAll("/+$", ""));
             if (!trimmed.equals(cfg.directApiBase)) {
                 cfg.directApiBase = trimmed;
                 changed = true;
@@ -367,7 +370,10 @@ public final class FlipBridgeConfig {
         if (base == null || base.isBlank() || isPlaceholder(base)) {
             return;
         }
-        String t = base.trim().replaceAll("/+$", "");
+        String t = FlipBridgeHealth.sanitizeApiBaseUrl(base.trim().replaceAll("/+$", ""));
+        if (t.isBlank()) {
+            return;
+        }
         if (!out.contains(t)) {
             out.add(t);
         }

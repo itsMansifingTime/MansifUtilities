@@ -23,11 +23,12 @@ When the BIN deal scanner sends a flip to Discord, the same flip is queued on th
 | `/mansifbridge direct` | Use bundled EC2 URL from mod defaults |
 | `/mansifbridge direct <ip> [port]` | Set EC2 API (e.g. `35.183.10.125 3001`) — polled **first** |
 | `/mansifbridge secret <value>` | Set and save feed secret |
-| `/mansifbridge hypixel <key>` | Save Hypixel API key (3-day expiry default) and push to EC2 for seller `/ah` lookups |
+| `/mansifbridge hypixel <key>` | Save Hypixel API key locally, then push to server in a background thread (no game freeze) |
 | `/mansifbridge hypixel <key> <days>` | Same with custom expiry (e.g. personal key) |
 | `/mansifbridge hypixel clear` | Clear local key metadata |
 | `/mansifbridge poll <ms>` | Poll interval (500–60000) |
 | `/mansifbridge enable` / `disable` | Toggle polling |
+| `/mansifbridge poll` | Catch-up poll now; chat explains empty feed, auth errors, or “already shown” |
 
 4. In **Controls → Key Binds → MansifUtilities Flip Alerts**, bind **View latest flip auction** (default `V`).
 5. When a flip arrives, chat shows a summary with **[View]** (`/viewauction`) and **[View seller auctions]** (`/ah <seller>`) when the server resolves the seller via your Hypixel key.

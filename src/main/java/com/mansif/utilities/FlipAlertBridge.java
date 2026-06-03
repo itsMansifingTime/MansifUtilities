@@ -44,6 +44,7 @@ public final class FlipAlertBridge {
     private static final AtomicBoolean pollInFlight = new AtomicBoolean(false);
     /** First poll uses {@code since=0} so alerts from before MC launched are not missed. */
     private static boolean catchUpPoll = true;
+    private static boolean manualPollFeedbackPending = false;
     private static long lastPollErrorChatAtMs = 0;
 
     private static KeyMapping viewFlipKey;
@@ -59,6 +60,7 @@ public final class FlipAlertBridge {
 
     public static void requestCatchUpPoll() {
         catchUpPoll = true;
+        manualPollFeedbackPending = true;
         lastPollAtMs = 0;
     }
 
@@ -150,20 +152,31 @@ public final class FlipAlertBridge {
         try {
             long sinceQuery = catchUpPoll ? 0L : lastSeenMs;
             catchUpPoll = false;
-            List<String> bases = config.pollApiBasesInOrder();
+            List<String> bases = config.pollApiBasesForFeed();
+            boolean manualEarly = manualPollFeedbackPending;
             if (bases.isEmpty()) {
                 notifyPollFailure(
-                        client, "no API URL — /mansifbridge sync or /mansifbridge direct <url>");
+                        client,
+                        "no API URL — /mansifbridge sync or /mansifbridge direct <url>",
+                        manualEarly);
                 return;
             }
 
             Exception lastError = null;
+            int newFlips = 0;
+            int feedCount = 0;
+            boolean manual = manualPollFeedbackPending;
             for (String base : bases) {
                 try {
-                    pollFeedFromBase(client, base, sinceQuery);
+                    PollResult result = pollFeedFromBase(client, base, sinceQuery);
+                    newFlips = result.newFlips;
+                    feedCount = result.feedCount;
+                    if (manual) {
+                        notifyPollSuccess(client, base, sinceQuery, result);
+                    }
                     return;
                 } catch (AuthFailureException e) {
-                    notifyPollFailure(client, "feed auth failed (wrong secret?)");
+                    notifyPollFailure(client, "feed auth failed (wrong secret?) — /mansifbridge secret …", manual);
                     return;
                 } catch (Exception e) {
                     lastError = e;
@@ -175,13 +188,15 @@ public final class FlipAlertBridge {
                     lastError != null && lastError.getMessage() != null
                             ? lastError.getMessage()
                             : "connection failed";
-            notifyPollFailure(client, formatPollFailureDetail(bases, detail));
+            notifyPollFailure(client, formatPollFailureDetail(bases, detail), manual);
         } finally {
             pollInFlight.set(false);
         }
     }
 
-    private static void pollFeedFromBase(Minecraft client, String base, long sinceQuery)
+    private record PollResult(int feedCount, int newFlips, String serverHint) {}
+
+    private static PollResult pollFeedFromBase(Minecraft client, String base, long sinceQuery)
             throws Exception {
         String url = config.feedUrlForBase(base, sinceQuery);
         HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
@@ -195,25 +210,35 @@ public final class FlipAlertBridge {
             throw new AuthFailureException();
         }
         if (code != 200) {
+            String apiMsg =
+                    parseJsonErrorOrHint(
+                            new String(readResponseBody(conn, false), StandardCharsets.UTF_8));
             if (code == 502 && base.contains("vercel.app")) {
                 throw new IOException(
-                        "HTTP 502 (Vercel cannot reach EC2) — use /mansifbridge direct http://YOUR_IP:3001");
+                        "HTTP 502 (Vercel cannot reach EC2)"
+                                + (apiMsg != null ? " — " + apiMsg : "")
+                                + " — use /mansifbridge direct http://YOUR_IP:3001");
             }
-            throw new IOException("HTTP " + code + " from " + base);
+            throw new IOException(
+                    "HTTP " + code + " from " + base + (apiMsg != null ? " — " + apiMsg : ""));
         }
-        byte[] body = conn.getInputStream().readAllBytes();
+        byte[] body = readResponseBody(conn, true);
         JsonObject root =
                 JsonParser.parseString(new String(body, StandardCharsets.UTF_8)).getAsJsonObject();
+        String serverHint = stringField(root, "hint");
         if (!root.has("flips") || !root.get("flips").isJsonArray()) {
-            return;
+            return new PollResult(0, 0, serverHint);
         }
         JsonArray flips = root.getAsJsonArray("flips");
+        int feedCount = flips.size();
+        int newFlips = 0;
         long maxSeen = lastSeenMs;
         for (JsonElement el : flips) {
             if (!el.isJsonObject()) continue;
             JsonObject flip = el.getAsJsonObject();
             String id = stringField(flip, "id");
             if (id == null || !seenFlipIds.add(id)) continue;
+            newFlips++;
             long sentAt = flip.has("sentAtMs") ? flip.get("sentAtMs").getAsLong() : 0L;
             if (sentAt > maxSeen) maxSeen = sentAt;
 
@@ -257,6 +282,79 @@ public final class FlipAlertBridge {
         while (seenFlipIds.size() > 500) {
             seenFlipIds.clear();
         }
+        return new PollResult(feedCount, newFlips, serverHint);
+    }
+
+    private static void notifyPollSuccess(
+            Minecraft client, String base, long sinceQuery, PollResult result) {
+        manualPollFeedbackPending = false;
+        int feedCount = result.feedCount;
+        int newFlips = result.newFlips;
+        client.execute(
+                () -> {
+                    if (client.player == null) {
+                        return;
+                    }
+                    ChatFormatting color =
+                            newFlips > 0 ? ChatFormatting.GREEN : ChatFormatting.YELLOW;
+                    String detail = explainPollOutcome(base, sinceQuery, result);
+                    client.player.displayClientMessage(
+                            mansifPrefix()
+                                    .append(
+                                            Component.literal("Poll via " + base + " — " + detail)
+                                                    .withStyle(color)),
+                            false);
+                });
+    }
+
+    private static String explainPollOutcome(String base, long sinceQuery, PollResult result) {
+        int feedCount = result.feedCount;
+        int newFlips = result.newFlips;
+        if (feedCount == 0) {
+            if (result.serverHint != null && !result.serverHint.isBlank()) {
+                return "0 flips — " + result.serverHint;
+            }
+            return "0 flips in feed. They are appended on EC2 when BIN Discord alerts fire "
+                    + "(data/bin-deal-ingame-feed.json). If you use Vercel, try "
+                    + "/mansifbridge direct http://YOUR_IP:3001.";
+        }
+        if (newFlips == 0) {
+            if (sinceQuery == 0L) {
+                return feedCount
+                        + " in feed, 0 new in chat — already shown this session "
+                        + "(restart MC to re-print) or entries missing auctionId.";
+            }
+            return feedCount
+                    + " in feed, 0 new in chat — all older than since="
+                    + sinceQuery
+                    + " (use /mansifbridge poll for catch-up with since=0).";
+        }
+        return feedCount + " in feed, " + newFlips + " new in chat.";
+    }
+
+    private static byte[] readResponseBody(HttpURLConnection conn, boolean successStream)
+            throws IOException {
+        var stream = successStream ? conn.getInputStream() : conn.getErrorStream();
+        if (stream == null) {
+            return new byte[0];
+        }
+        return stream.readAllBytes();
+    }
+
+    private static String parseJsonErrorOrHint(String bodyText) {
+        if (bodyText == null || bodyText.isBlank()) {
+            return null;
+        }
+        try {
+            JsonObject root = JsonParser.parseString(bodyText).getAsJsonObject();
+            String error = stringField(root, "error");
+            if (error != null && !error.isBlank()) {
+                return error;
+            }
+            return stringField(root, "hint");
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private static String formatPollFailureDetail(List<String> bases, String detail) {
@@ -270,10 +368,13 @@ public final class FlipAlertBridge {
 
     private static final class AuthFailureException extends Exception {}
 
-    private static void notifyPollFailure(Minecraft client, String detail) {
+    private static void notifyPollFailure(Minecraft client, String detail, boolean manual) {
         long now = System.currentTimeMillis();
-        if (now - lastPollErrorChatAtMs < 30_000L) {
+        if (!manual && now - lastPollErrorChatAtMs < 30_000L) {
             return;
+        }
+        if (manual) {
+            manualPollFeedbackPending = false;
         }
         lastPollErrorChatAtMs = now;
         client.execute(

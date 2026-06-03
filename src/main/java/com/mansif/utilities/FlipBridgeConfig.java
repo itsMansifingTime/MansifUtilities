@@ -177,12 +177,40 @@ public final class FlipBridgeConfig {
         addCandidate(out, directApiBase);
         addCandidate(out, "https://api.mansif.dev");
         addCandidate(out, apiBase);
-        FlipBridgeConfig defaults = loadBundledDefaults();
-        addCandidate(out, defaults.directApiBase);
-        addCandidate(out, defaults.apiBase);
         addCandidate(out, "https://mansiftracker.vercel.app");
-        addCandidate(out, "http://127.0.0.1:3001");
+        FlipBridgeConfig defaults = loadBundledDefaults();
+        if (isBlankOrPlaceholder(directApiBase)) {
+            addCandidate(out, defaults.directApiBase);
+        }
+        if (isBlankOrPlaceholder(apiBase)) {
+            addCandidate(out, defaults.apiBase);
+        }
+        if (wantsLocalhostProbe()) {
+            addCandidate(out, "http://127.0.0.1:3001");
+        }
         return out;
+    }
+
+    /** Fewer hosts at startup — no localhost, no duplicate bundled URLs. */
+    public static List<String> startupProbeBases(FlipBridgeConfig cfg) {
+        List<String> out = new ArrayList<>();
+        addCandidate(out, cfg.directApiBase);
+        addCandidate(out, "https://api.mansif.dev");
+        addCandidate(out, cfg.apiBase);
+        addCandidate(out, "https://mansiftracker.vercel.app");
+        return out;
+    }
+
+    private boolean wantsLocalhostProbe() {
+        return containsLocalhost(directApiBase) || containsLocalhost(apiBase);
+    }
+
+    private static boolean containsLocalhost(String base) {
+        if (base == null || base.isBlank()) {
+            return false;
+        }
+        String lower = base.toLowerCase(Locale.ROOT);
+        return lower.contains("127.0.0.1") || lower.contains("localhost");
     }
 
     private static FlipBridgeConfig readDiskOrNew() {
@@ -350,7 +378,9 @@ public final class FlipBridgeConfig {
         addCandidate(out, defaults.directApiBase);
         addCandidate(out, "https://mansiftracker.vercel.app");
         addCandidate(out, "https://api.mansif.dev");
-        addCandidate(out, "http://127.0.0.1:3001");
+        if (cfg.wantsLocalhostProbe()) {
+            addCandidate(out, "http://127.0.0.1:3001");
+        }
         return out;
     }
 

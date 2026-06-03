@@ -17,6 +17,8 @@ public final class FlipBridgeHealth {
 
     public static final int PROBE_CONNECT_MS = 5_000;
     public static final int PROBE_READ_MS = 12_000;
+    public static final int STARTUP_CONNECT_MS = 3_500;
+    public static final int STARTUP_READ_MS = 6_000;
 
     public enum ProbeKind {
         OK,
@@ -104,6 +106,11 @@ public final class FlipBridgeHealth {
     }
 
     public static HostProbe probeFeedHost(FlipBridgeConfig cfg, String base) {
+        return probeFeedHost(cfg, base, PROBE_CONNECT_MS, PROBE_READ_MS);
+    }
+
+    public static HostProbe probeFeedHost(
+            FlipBridgeConfig cfg, String base, int connectMs, int readMs) {
         String label = shortLabel(base);
         String sanitized = sanitizeApiBaseUrl(base);
         if (sanitized.isBlank()) {
@@ -123,8 +130,8 @@ public final class FlipBridgeHealth {
             HttpURLConnection conn =
                     (HttpURLConnection) URI.create(url).toURL().openConnection();
             conn.setRequestMethod("GET");
-            conn.setConnectTimeout(PROBE_CONNECT_MS);
-            conn.setReadTimeout(PROBE_READ_MS);
+            conn.setConnectTimeout(connectMs);
+            conn.setReadTimeout(readMs);
             conn.setRequestProperty("Authorization", "Bearer " + cfg.secret.trim());
             conn.setRequestProperty("Accept", "application/json");
             int code = conn.getResponseCode();
@@ -189,20 +196,15 @@ public final class FlipBridgeHealth {
                     label,
                     sanitized,
                     ProbeKind.TIMEOUT,
-                    "timed out after " + (PROBE_CONNECT_MS + PROBE_READ_MS) / 1000 + "s",
-                    "Server slow/down, or firewall blocking you → try another host in /mansifbridge status");
+                    "timed out after " + (connectMs + readMs) / 1000 + "s",
+                    fixForHost(sanitized, ProbeKind.TIMEOUT));
         } catch (IOException e) {
             String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             ProbeKind kind = ProbeKind.UNREACHABLE;
-            String fix = "Check URL and network";
             if (msg.toLowerCase(Locale.ROOT).contains("connection refused")) {
                 kind = ProbeKind.CONNECTION_REFUSED;
-                fix =
-                        sanitized.contains("mansif.dev") && sanitized.contains(":3001")
-                                ? "Domain does not use port 3001 — run /mansifbridge direct https://api.mansif.dev"
-                                : "Nothing listening — pm2 mansif-next-api on EC2 :3001, or open SG TCP 3001";
             }
-            return new HostProbe(label, sanitized, kind, msg, fix);
+            return new HostProbe(label, sanitized, kind, msg, fixForHost(sanitized, kind));
         } catch (Exception e) {
             return new HostProbe(
                     label,
@@ -226,16 +228,19 @@ public final class FlipBridgeHealth {
                         ? "Synced bridge-config from server."
                         : "Could not sync bridge-config (will use local/bundled URLs).");
 
-        List<String> bases = cfg.pollApiBasesForFeed();
+        List<String> bases = FlipBridgeConfig.startupProbeBases(cfg);
         String chosen = null;
         for (String base : bases) {
-            HostProbe probe = probeFeedHost(cfg, base);
+            HostProbe probe =
+                    probeFeedHost(cfg, base, STARTUP_CONNECT_MS, STARTUP_READ_MS);
             probes.add(probe);
             if (chosen == null
                     && (probe.kind() == ProbeKind.OK || probe.kind() == ProbeKind.EMPTY_FEED)) {
                 chosen = probe.baseUrl();
             }
         }
+
+        pruneFailedDirectIp(cfg, probes);
 
         if (chosen != null) {
             if (chosen.contains("mansif.dev") || chosen.contains("vercel.app")) {
@@ -257,18 +262,137 @@ public final class FlipBridgeHealth {
         if (ready) {
             lines.add("Flip bridge ready — polling every " + cfg.pollIntervalMs + "ms.");
         } else {
-            lines.add("Flip bridge NOT ready — run /mansifbridge status for details.");
-            for (HostProbe p : probes) {
-                if (p.kind() != ProbeKind.OK && p.kind() != ProbeKind.EMPTY_FEED) {
-                    lines.add("  • " + p.label() + ": " + p.detail());
-                    if (p.fix() != null) {
-                        lines.add("    → " + p.fix());
-                    }
-                }
-            }
+            appendCompactStartupFailure(lines, probes);
         }
 
         return new StartupResult(ready, chosen, lines, probes);
+    }
+
+    /** At most three chat lines on failure (no per-host spam). */
+    private static void appendCompactStartupFailure(
+            List<String> lines, List<HostProbe> probes) {
+        lines.add("Flip bridge NOT ready — /mansifbridge status for full probe list.");
+        HostProbe headline = pickHeadlineFailure(probes);
+        if (headline != null) {
+            lines.add(headline.label() + ": " + headline.detail());
+        }
+        String action = consolidatedStartupFix(probes);
+        if (action != null && !action.isBlank()) {
+            lines.add("→ " + action);
+        }
+    }
+
+    private static HostProbe pickHeadlineFailure(List<HostProbe> probes) {
+        HostProbe directFail = null;
+        HostProbe anyFail = null;
+        for (HostProbe p : probes) {
+            if (p.kind() == ProbeKind.OK || p.kind() == ProbeKind.EMPTY_FEED || p.kind() == ProbeKind.SKIPPED) {
+                continue;
+            }
+            if (anyFail == null) {
+                anyFail = p;
+            }
+            if (looksLikeRawIpBase(p.baseUrl())) {
+                directFail = p;
+            }
+        }
+        return directFail != null ? directFail : anyFail;
+    }
+
+    private static String consolidatedStartupFix(List<HostProbe> probes) {
+        boolean ipFailed = false;
+        boolean mansifDevFailed = false;
+        boolean vercel502 = false;
+        for (HostProbe p : probes) {
+            if (p.kind() == ProbeKind.OK || p.kind() == ProbeKind.EMPTY_FEED) {
+                return null;
+            }
+            if (looksLikeRawIpBase(p.baseUrl()) && p.kind() != ProbeKind.OK) {
+                ipFailed = true;
+            }
+            if (p.baseUrl().contains("mansif.dev") && p.kind() != ProbeKind.OK) {
+                mansifDevFailed = true;
+            }
+            if (p.baseUrl().contains("vercel.app")
+                    && p.kind() == ProbeKind.HTTP_ERROR
+                    && p.detail() != null
+                    && p.detail().contains("502")) {
+                vercel502 = true;
+            }
+        }
+        if (ipFailed && mansifDevFailed) {
+            return "/mansifbridge sync (server EC2 URL) then /mansifbridge status — api.mansif.dev HTTPS may be down; use direct EC2 :3001";
+        }
+        if (ipFailed) {
+            return "/mansifbridge sync — your saved EC2 IP may be wrong or SG :3001 blocked";
+        }
+        if (mansifDevFailed) {
+            return "api.mansif.dev HTTPS is down — /mansifbridge direct YOUR_EC2_IP 3001";
+        }
+        if (vercel502) {
+            return "Vercel cannot reach EC2 — fix SITE_API_ORIGIN on Vercel or use /mansifbridge direct EC2_IP 3001";
+        }
+        return "/mansifbridge status";
+    }
+
+    private static void pruneFailedDirectIp(FlipBridgeConfig cfg, List<HostProbe> probes) {
+        if (cfg.directApiBase == null || cfg.directApiBase.isBlank()) {
+            return;
+        }
+        if (!looksLikeRawIpBase(cfg.directApiBase)) {
+            return;
+        }
+        for (HostProbe p : probes) {
+            if (!p.baseUrl().equals(sanitizeApiBaseUrl(cfg.directApiBase))) {
+                continue;
+            }
+            if (p.kind() == ProbeKind.OK || p.kind() == ProbeKind.EMPTY_FEED) {
+                return;
+            }
+            cfg.directApiBase = "";
+            FlipBridgeConfig.save(cfg);
+            MansifUtilities.LOGGER.warn(
+                    "Cleared dead directApiBase {} after startup probe ({})",
+                    p.baseUrl(),
+                    p.kind());
+            return;
+        }
+    }
+
+    static boolean looksLikeRawIpBase(String base) {
+        if (base == null || base.isBlank()) {
+            return false;
+        }
+        String lower = base.toLowerCase(Locale.ROOT);
+        return lower.startsWith("http://")
+                && !lower.contains("mansif.dev")
+                && !lower.contains("vercel.app")
+                && !lower.contains("localhost")
+                && !lower.contains("127.0.0.1");
+    }
+
+    private static String fixForHost(String sanitized, ProbeKind kind) {
+        if (sanitized.contains("mansif.dev")) {
+            if (sanitized.contains(":3001")) {
+                return "Use https://api.mansif.dev (no :3001 on the domain)";
+            }
+            if (kind == ProbeKind.CONNECTION_REFUSED || kind == ProbeKind.TIMEOUT) {
+                return "HTTPS on api.mansif.dev is down — use /mansifbridge direct EC2_IP 3001 or fix nginx/443 on server";
+            }
+        }
+        if (looksLikeRawIpBase(sanitized)) {
+            if (kind == ProbeKind.TIMEOUT) {
+                return "Wrong IP, firewall, or EC2 stopped — /mansifbridge sync for current IP";
+            }
+            return "pm2 mansif-next-api on :3001 and open SG TCP 3001";
+        }
+        if (sanitized.contains("vercel.app") && kind == ProbeKind.HTTP_ERROR) {
+            return "Fix SITE_API_ORIGIN on Vercel or /mansifbridge direct EC2_IP 3001";
+        }
+        if (sanitized.contains("127.0.0.1") || sanitized.contains("localhost")) {
+            return "Local Next not running — start mansif-next-api or use /mansifbridge direct EC2_IP 3001";
+        }
+        return "/mansifbridge status";
     }
 
     public static String formatProbeLine(HostProbe p) {

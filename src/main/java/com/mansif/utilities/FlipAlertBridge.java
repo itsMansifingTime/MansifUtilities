@@ -163,18 +163,24 @@ public final class FlipAlertBridge {
             }
 
             Exception lastError = null;
-            int newFlips = 0;
-            int feedCount = 0;
             boolean manual = manualPollFeedbackPending;
+            String lastEmptyBase = null;
+            PollResult lastEmptyResult = null;
+            int emptyHostsTried = 0;
             for (String base : bases) {
                 try {
                     PollResult result = pollFeedFromBase(client, base, sinceQuery);
-                    newFlips = result.newFlips;
-                    feedCount = result.feedCount;
-                    if (manual) {
-                        notifyPollSuccess(client, base, sinceQuery, result);
+                    if (result.feedCount > 0 || result.newFlips > 0) {
+                        if (manual) {
+                            notifyPollSuccess(client, base, sinceQuery, result, null);
+                        }
+                        return;
                     }
-                    return;
+                    emptyHostsTried++;
+                    lastEmptyBase = base;
+                    lastEmptyResult = result;
+                    MansifUtilities.LOGGER.debug(
+                            "Flip feed empty on {} ({} hosts tried so far)", base, emptyHostsTried);
                 } catch (AuthFailureException e) {
                     notifyPollFailure(client, "feed auth failed (wrong secret?) — /mansifbridge secret …", manual);
                     return;
@@ -182,6 +188,17 @@ public final class FlipAlertBridge {
                     lastError = e;
                     MansifUtilities.LOGGER.debug("Flip feed failed for {}: {}", base, e.toString());
                 }
+            }
+
+            if (lastEmptyResult != null && lastEmptyBase != null) {
+                String triedNote =
+                        emptyHostsTried > 1
+                                ? "Checked " + emptyHostsTried + " API hosts; all returned 0 flips."
+                                : null;
+                if (manual) {
+                    notifyPollSuccess(client, lastEmptyBase, sinceQuery, lastEmptyResult, triedNote);
+                }
+                return;
             }
 
             String detail =
@@ -286,9 +303,12 @@ public final class FlipAlertBridge {
     }
 
     private static void notifyPollSuccess(
-            Minecraft client, String base, long sinceQuery, PollResult result) {
+            Minecraft client,
+            String base,
+            long sinceQuery,
+            PollResult result,
+            String extraNote) {
         manualPollFeedbackPending = false;
-        int feedCount = result.feedCount;
         int newFlips = result.newFlips;
         client.execute(
                 () -> {
@@ -298,6 +318,9 @@ public final class FlipAlertBridge {
                     ChatFormatting color =
                             newFlips > 0 ? ChatFormatting.GREEN : ChatFormatting.YELLOW;
                     String detail = explainPollOutcome(base, sinceQuery, result);
+                    if (extraNote != null && !extraNote.isBlank()) {
+                        detail = detail + " " + extraNote;
+                    }
                     client.player.displayClientMessage(
                             mansifPrefix()
                                     .append(
@@ -315,8 +338,8 @@ public final class FlipAlertBridge {
                 return "0 flips — " + result.serverHint;
             }
             return "0 flips in feed. They are appended on EC2 when BIN Discord alerts fire "
-                    + "(data/bin-deal-ingame-feed.json). If you use Vercel, try "
-                    + "/mansifbridge direct http://YOUR_IP:3001.";
+                    + "(data/bin-deal-ingame-feed.json on the box running :3001). "
+                    + "Vercel is often empty — use /mansifbridge direct http://YOUR_IP:3001.";
         }
         if (newFlips == 0) {
             if (sinceQuery == 0L) {

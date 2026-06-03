@@ -79,8 +79,7 @@ public final class FlipBridgeConfig {
 
     /** Pull apiBase/poll/enabled from MansifTracker (no auth). Updates config file on success. */
     public static boolean syncFromServer(FlipBridgeConfig cfg) {
-        List<String> bases = candidateApiBases(cfg);
-        for (String base : bases) {
+        for (String base : candidateApiBasesForConfigPull(cfg)) {
             FlipBridgeConfig remote = fetchRemoteConfig(base);
             if (remote == null) {
                 continue;
@@ -162,6 +161,25 @@ public final class FlipBridgeConfig {
         FlipBridgeConfig defaults = loadBundledDefaults();
         addCandidate(out, defaults.directApiBase);
         addCandidate(out, defaults.apiBase);
+        addCandidate(out, "https://mansiftracker.vercel.app");
+        addCandidate(out, "https://api.mansif.dev");
+        addCandidate(out, "http://127.0.0.1:3001");
+        return out;
+    }
+
+    /**
+     * Flip feed poll order: user {@link #directApiBase} first when set (EC2 has the feed file),
+     * then public apiBase / Vercel. Empty feeds on one host fall through to the next in
+     * {@link FlipAlertBridge#pollFeed}.
+     */
+    public List<String> pollApiBasesForFeed() {
+        List<String> out = new ArrayList<>();
+        addCandidate(out, directApiBase);
+        addCandidate(out, apiBase);
+        FlipBridgeConfig defaults = loadBundledDefaults();
+        addCandidate(out, defaults.directApiBase);
+        addCandidate(out, defaults.apiBase);
+        addCandidate(out, "https://mansiftracker.vercel.app");
         addCandidate(out, "https://api.mansif.dev");
         addCandidate(out, "http://127.0.0.1:3001");
         return out;
@@ -308,6 +326,31 @@ public final class FlipBridgeConfig {
         return false;
     }
 
+    /**
+     * Authenticated POST/GET (Hypixel key push, etc.): public HTTPS before direct EC2 so a dead
+     * :3001 does not stall for multiple connect timeouts. Feed poll still prefers direct.
+     */
+    public static List<String> apiBasesForServerPush(FlipBridgeConfig cfg) {
+        return candidateApiBasesForConfigPull(cfg);
+    }
+
+    /**
+     * Config pull: try HTTPS / public apiBase first so a dead direct EC2 IP does not block for
+     * multiple connect timeouts (feed poll still prefers direct — see pollApiBasesInOrder).
+     */
+    private static List<String> candidateApiBasesForConfigPull(FlipBridgeConfig cfg) {
+        List<String> out = new ArrayList<>();
+        addCandidate(out, cfg.apiBase);
+        addCandidate(out, cfg.directApiBase);
+        FlipBridgeConfig defaults = loadBundledDefaults();
+        addCandidate(out, defaults.apiBase);
+        addCandidate(out, defaults.directApiBase);
+        addCandidate(out, "https://mansiftracker.vercel.app");
+        addCandidate(out, "https://api.mansif.dev");
+        addCandidate(out, "http://127.0.0.1:3001");
+        return out;
+    }
+
     private static List<String> candidateApiBases(FlipBridgeConfig cfg) {
         List<String> out = new ArrayList<>();
         addCandidate(out, cfg.directApiBase);
@@ -335,8 +378,8 @@ public final class FlipBridgeConfig {
         try {
             HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
             conn.setRequestMethod("GET");
-            conn.setConnectTimeout(6000);
-            conn.setReadTimeout(6000);
+            conn.setConnectTimeout(4000);
+            conn.setReadTimeout(4000);
             conn.setRequestProperty("Accept", "application/json");
             if (conn.getResponseCode() != 200) {
                 return null;

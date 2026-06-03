@@ -167,6 +167,7 @@ public final class FlipAlertBridge {
             String lastEmptyBase = null;
             PollResult lastEmptyResult = null;
             int emptyHostsTried = 0;
+            StringBuilder attemptLog = new StringBuilder();
             for (String base : bases) {
                 try {
                     PollResult result = pollFeedFromBase(client, base, sinceQuery);
@@ -179,6 +180,7 @@ public final class FlipAlertBridge {
                     emptyHostsTried++;
                     lastEmptyBase = base;
                     lastEmptyResult = result;
+                    appendAttempt(attemptLog, base, "0 flips", result.serverHint);
                     MansifUtilities.LOGGER.debug(
                             "Flip feed empty on {} ({} hosts tried so far)", base, emptyHostsTried);
                 } catch (AuthFailureException e) {
@@ -186,15 +188,17 @@ public final class FlipAlertBridge {
                     return;
                 } catch (Exception e) {
                     lastError = e;
+                    appendAttempt(
+                            attemptLog,
+                            base,
+                            e.getMessage() != null ? e.getMessage() : "failed",
+                            null);
                     MansifUtilities.LOGGER.debug("Flip feed failed for {}: {}", base, e.toString());
                 }
             }
 
             if (lastEmptyResult != null && lastEmptyBase != null) {
-                String triedNote =
-                        emptyHostsTried > 1
-                                ? "Checked " + emptyHostsTried + " API hosts; all returned 0 flips."
-                                : null;
+                String triedNote = buildAttemptSummary(attemptLog, emptyHostsTried);
                 if (manual) {
                     notifyPollSuccess(client, lastEmptyBase, sinceQuery, lastEmptyResult, triedNote);
                 }
@@ -328,6 +332,50 @@ public final class FlipAlertBridge {
                                                     .withStyle(color)),
                             false);
                 });
+    }
+
+    private static void appendAttempt(
+            StringBuilder log, String base, String status, String serverHint) {
+        if (log.length() > 0) {
+            log.append(" | ");
+        }
+        log.append(shortBaseLabel(base)).append(": ").append(status);
+        if (serverHint != null && !serverHint.isBlank()) {
+            log.append(" (").append(truncate(serverHint, 80)).append(")");
+        }
+    }
+
+    private static String buildAttemptSummary(StringBuilder attemptLog, int emptyHostsTried) {
+        if (attemptLog.length() == 0) {
+            return emptyHostsTried > 0 ? "Checked " + emptyHostsTried + " hosts; all empty." : null;
+        }
+        return truncate(attemptLog.toString(), 220);
+    }
+
+    private static String shortBaseLabel(String base) {
+        if (base.contains("vercel.app")) {
+            return "Vercel";
+        }
+        if (base.contains("mansif.dev")) {
+            return "api.mansif.dev";
+        }
+        if (base.startsWith("http://127.0.0.1") || base.startsWith("http://localhost")) {
+            return "localhost";
+        }
+        int slash = base.indexOf("://");
+        if (slash >= 0) {
+            String rest = base.substring(slash + 3);
+            int path = rest.indexOf('/');
+            return path >= 0 ? rest.substring(0, path) : rest;
+        }
+        return base;
+    }
+
+    private static String truncate(String s, int max) {
+        if (s.length() <= max) {
+            return s;
+        }
+        return s.substring(0, max - 3) + "...";
     }
 
     private static String explainPollOutcome(String base, long sinceQuery, PollResult result) {

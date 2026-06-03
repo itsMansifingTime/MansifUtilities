@@ -172,6 +172,17 @@ public final class FlipBridgeHealth {
             }
 
             JsonObject root = JsonParser.parseString(body).getAsJsonObject();
+            if (root.has("ok") && root.get("ok").isJsonPrimitive() && !root.get("ok").getAsBoolean()) {
+                String hint = parseJsonHint(body);
+                return new HostProbe(
+                        label,
+                        sanitized,
+                        ProbeKind.HTTP_ERROR,
+                        hint != null ? hint : "feed unavailable (proxy)",
+                        sanitized.contains("vercel.app")
+                                ? "Vercel cannot reach EC2 — use /mansifbridge direct EC2_IP 3001"
+                                : fixForHost(sanitized, ProbeKind.HTTP_ERROR));
+            }
             int flips =
                     root.has("flips") && root.get("flips").isJsonArray()
                             ? root.getAsJsonArray("flips").size()

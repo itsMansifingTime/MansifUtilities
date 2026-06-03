@@ -332,6 +332,13 @@ public final class FlipAlertBridge {
         byte[] body = readResponseBody(conn, true);
         JsonObject root =
                 JsonParser.parseString(new String(body, StandardCharsets.UTF_8)).getAsJsonObject();
+        if (root.has("ok") && root.get("ok").isJsonPrimitive() && !root.get("ok").getAsBoolean()) {
+            String err = stringField(root, "hint");
+            if (err == null || err.isBlank()) {
+                err = stringField(root, "error");
+            }
+            throw new IOException(err != null ? err : "feed unavailable");
+        }
         String serverHint = stringField(root, "hint");
         if (!root.has("flips") || !root.get("flips").isJsonArray()) {
             return new PollResult(0, 0, serverHint);

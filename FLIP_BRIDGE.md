@@ -21,7 +21,7 @@ When the BIN deal scanner sends a flip to Discord, the same flip is queued on th
 | `/mansifbridge sync` | Pull `apiBase` from server `/api/bin-deal-ingame-bridge-config` |
 | `/mansifbridge api <url>` | Set and save public API base (HTTPS / Vercel) |
 | `/mansifbridge direct` | Use bundled EC2 URL from mod defaults |
-| `/mansifbridge direct <ip> [port]` | Set EC2 API (e.g. `35.183.10.125 3001`) — polled **first** |
+| `/mansifbridge direct <url>` | Set API host (default `https://api.mansif.dev`, or `YOUR_IP 3001`) — polled **first** |
 | `/mansifbridge secret <value>` | Set and save feed secret |
 | `/mansifbridge hypixel <key>` | Save Hypixel API key locally, then push to server in a background thread (no game freeze) |
 | `/mansifbridge hypixel <key> <days>` | Same with custom expiry (e.g. personal key) |

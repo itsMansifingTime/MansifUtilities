@@ -175,12 +175,12 @@ public final class FlipBridgeConfig {
     public List<String> pollApiBasesForFeed() {
         List<String> out = new ArrayList<>();
         addCandidate(out, directApiBase);
+        addCandidate(out, "https://api.mansif.dev");
         addCandidate(out, apiBase);
         FlipBridgeConfig defaults = loadBundledDefaults();
         addCandidate(out, defaults.directApiBase);
         addCandidate(out, defaults.apiBase);
         addCandidate(out, "https://mansiftracker.vercel.app");
-        addCandidate(out, "https://api.mansif.dev");
         addCandidate(out, "http://127.0.0.1:3001");
         return out;
     }
